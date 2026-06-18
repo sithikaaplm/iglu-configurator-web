@@ -235,7 +235,7 @@ var MAX_PANELS = 6;
 // Nesting
 var STOCK_LENGTH = 5000;
 var KERF = 5;
-var EXTRUSION_NAMES = { "24800":"Head extrusion", "24810":"Jamb extrusion", "24820":"Sill extrusion" };
+var EXTRUSION_NAMES = { "24800":"IGLU Head adapter", "24810":"IGLU Jamb adapter", "24820":"IGLU Sill adapter" };
 
 /* ---------- Compute (src/lib/iglu/compute.ts) ---------- */
 function computeBom(config) {
@@ -255,12 +255,12 @@ function computeBom(config) {
   var blades = { partNo: bp.partNo, description: bp.description, qty: totalBlades };
 
   var headExtrusions = panels.map(function (_, i) {
-    return { partNo:"24800", description:"Head extrusion — Panel " + (i+1), qty:1,
+    return { partNo:"24800", description:"IGLU Head adapter — Panel " + (i+1), qty:1,
              cutLength: bladeWidth + HEAD_WIDTH_ADD_MM, deductionFlag:false,
              formula: bladeWidth + "mm (blade width) + " + HEAD_WIDTH_ADD_MM + "mm = " + (bladeWidth + HEAD_WIDTH_ADD_MM) + "mm" };
   });
   var sillExtrusions = panels.map(function (_, i) {
-    return { partNo:"24820", description:"Sill extrusion — Panel " + (i+1), qty:1,
+    return { partNo:"24820", description:"IGLU Sill adapter — Panel " + (i+1), qty:1,
              cutLength: bladeWidth + SILL_WIDTH_ADD_MM, deductionFlag:false,
              formula: bladeWidth + "mm (blade width) + " + SILL_WIDTH_ADD_MM + "mm = " + (bladeWidth + SILL_WIDTH_ADD_MM) + "mm" };
   });
@@ -272,14 +272,14 @@ function computeBom(config) {
   }
   var jambExtrusions = [];
   var lo = jambCut(0);
-  jambExtrusions.push({ partNo:"24810", description:"Jamb — left outer", qty:1, cutLength:lo.cutLength, formula:lo.formula, deductionFlag:false });
+  jambExtrusions.push({ partNo:"24810", description:"IGLU Jamb adapter — left outer", qty:1, cutLength:lo.cutLength, formula:lo.formula, deductionFlag:false });
   for (var i = 0; i < N - 1; i++) {
     var lc = jambCut(i), rc = jambCut(i + 1);
     var shared = lc.cutLength >= rc.cutLength ? lc : rc;
-    jambExtrusions.push({ partNo:"24810", description:"Jamb — shared (panels " + (i+1) + "/" + (i+2) + ")", qty:1, cutLength:shared.cutLength, formula:shared.formula, deductionFlag:false });
+    jambExtrusions.push({ partNo:"24810", description:"IGLU Jamb adapter — shared (panels " + (i+1) + "/" + (i+2) + ")", qty:1, cutLength:shared.cutLength, formula:shared.formula, deductionFlag:false });
   }
   var ro = jambCut(N - 1);
-  jambExtrusions.push({ partNo:"24810", description:"Jamb — right outer", qty:1, cutLength:ro.cutLength, formula:ro.formula, deductionFlag:false });
+  jambExtrusions.push({ partNo:"24810", description:"IGLU Jamb adapter — right outer", qty:1, cutLength:ro.cutLength, formula:ro.formula, deductionFlag:false });
 
   // Packers — supplied by Breezeway (shown greyed, not part of the manufactured BOM)
   var headPackers = { partNo:"19179", description:"Head packer", qty: 2 * N };
