@@ -218,7 +218,8 @@ var GALLERY_DESCRIPTION = {};
 // Extrusion cut-length additions (verified from Size, Cutting & Fixing Details.pdf)
 var HEAD_WIDTH_ADD_MM  = 51;   // head cut  = bladeWidth + 51
 var SILL_WIDTH_ADD_MM  = 89;   // sill cut  = bladeWidth + 89
-var JAMB_HEIGHT_ADD_MM = 20;   // jamb cut  = gallery height + 20
+var JAMB_BOX_DEDUCT_MM    = 55;   // jamb cut    = box height − 55
+var MULLION_HEIGHT_ADD_MM = 20;   // mullion cut = taller gallery + 20
 var JAMB_FACE_MM       = HEAD_WIDTH_ADD_MM / 2; // 25.5 — per-jamb face for box width
 // Required window/box size
 var BOX_HEIGHT_PER_BLADE_MM = 140; // mm of box height per blade
@@ -282,16 +283,13 @@ function computeBom(config) {
              formula: panel.bladeWidth + "mm (blade width) + " + SILL_WIDTH_ADD_MM + "mm = " + (panel.bladeWidth + SILL_WIDTH_ADD_MM) + "mm" };
   });
 
-  // Jambs — 2 outer only; mullions separate inner galleries.
-  function jambCut(i) {
-    var h = BLADE_HEIGHTS[panels[i].bladeCount].height;
-    return { cutLength: h + JAMB_HEIGHT_ADD_MM,
-             formula: h + "mm (gallery height) + " + JAMB_HEIGHT_ADD_MM + "mm = " + (h + JAMB_HEIGHT_ADD_MM) + "mm" };
-  }
-  var lo = jambCut(0), ro = jambCut(N - 1);
+  // Jambs — 2 outer only; cut = box height − 55 (full-frame outer members, same both sides).
+  var jbBoxHeight = BOX_HEIGHT_PER_BLADE_MM * Math.max.apply(null, panels.map(function (p) { return p.bladeCount; })) + BOX_HEIGHT_BASE_MM;
+  var jambCutLength = jbBoxHeight - JAMB_BOX_DEDUCT_MM;
+  var jambFormula = jbBoxHeight + "mm (box height) − " + JAMB_BOX_DEDUCT_MM + "mm = " + jambCutLength + "mm";
   var jambExtrusions = [
-    { partNo:"24810", description:"IGLU Jamb adapter — left outer",  qty:1, cutLength:lo.cutLength, formula:lo.formula, deductionFlag:false },
-    { partNo:"24810", description:"IGLU Jamb adapter — right outer", qty:1, cutLength:ro.cutLength, formula:ro.formula, deductionFlag:false }
+    { partNo:"24810", description:"IGLU Jamb adapter — left outer",  qty:1, cutLength:jambCutLength, formula:jambFormula, deductionFlag:false },
+    { partNo:"24810", description:"IGLU Jamb adapter — right outer", qty:1, cutLength:jambCutLength, formula:jambFormula, deductionFlag:false }
   ];
 
   // Mullions (24300) — N−1, one between each pair of galleries. Cut spans the
@@ -300,8 +298,8 @@ function computeBom(config) {
   for (var i = 0; i < N - 1; i++) {
     var taller = Math.max(BLADE_HEIGHTS[panels[i].bladeCount].height, BLADE_HEIGHTS[panels[i + 1].bladeCount].height);
     mullionExtrusions.push({ partNo: MULLION_PART_NO, description: MULLION_DESCRIPTION + " — between panels " + (i+1) + "/" + (i+2), qty:1,
-      cutLength: taller + JAMB_HEIGHT_ADD_MM, deductionFlag:true,
-      formula: taller + "mm (taller gallery) + " + JAMB_HEIGHT_ADD_MM + "mm = " + (taller + JAMB_HEIGHT_ADD_MM) + "mm" });
+      cutLength: taller + MULLION_HEIGHT_ADD_MM, deductionFlag:true,
+      formula: taller + "mm (taller gallery) + " + MULLION_HEIGHT_ADD_MM + "mm = " + (taller + MULLION_HEIGHT_ADD_MM) + "mm" });
   }
 
   // Packers — supplied by Breezeway (shown greyed, not part of the manufactured BOM)
