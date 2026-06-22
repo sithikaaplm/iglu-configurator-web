@@ -221,7 +221,6 @@ var SILL_WIDTH_ADD_MM  = 89;   // sill cut  = bladeWidth + 89
 var JAMB_HEIGHT_ADD_MM = 20;   // jamb cut  = gallery height + 20
 var JAMB_FACE_MM       = HEAD_WIDTH_ADD_MM / 2; // 25.5 — per-jamb face for box width
 // Required window/box size
-var WEATHERSTRIP_MM     = 5;   // weatherstrip allowance (height)
 var BOX_HEIGHT_EXTRA_MM = 55;  // additional box-height allowance
 var BOX_WIDTH_EXTRA_MM  = 74;  // additional box-width allowance
 // Mullions (multi-gallery). Each gallery end finishes 58.5mm from the mullion
@@ -320,7 +319,7 @@ function computeOpening(config) {
   var tallest = Math.max.apply(null, panels.map(function (p) { return BLADE_HEIGHTS[p.bladeCount].height; }));
   var widthSum = panels.reduce(function (s, p) { return s + p.bladeWidth; }, 0);
   var boxWidth = widthSum + (N - 1) * MULLION_GAP_MM + OUTER_BOX_EXTRA_MM;
-  var boxHeight = tallest + WEATHERSTRIP_MM + JAMB_HEIGHT_ADD_MM + BOX_HEIGHT_EXTRA_MM;
+  var boxHeight = tallest + JAMB_HEIGHT_ADD_MM + BOX_HEIGHT_EXTRA_MM;
 
   // Spans: box→mullion 1, mullion i→i+1, …, mullion N−1→box (only when N ≥ 2).
   var spans = [];
