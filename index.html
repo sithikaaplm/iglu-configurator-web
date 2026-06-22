@@ -582,7 +582,7 @@ function renderForm() {
     var n = VALID_BLADE_COUNTS[c];
     html += '<option value="' + n + '"' + (n === shared ? " selected" : "") + '>' + n + ' blades</option>';
   }
-  html += '</select><span class="hpill">' + bh.height + 'mm<span class="ws">(+' + (bh.ws - bh.height) + 'mm ws)</span></span></div>';
+  html += '</select><span class="hpill">' + bh.height + 'mm</span></div>';
 
   html += '<div class="panels"><div class="ph"><h3>Panels (' + config.panels.length + ')</h3>';
   if (config.panels.length < MAX_PANELS) html += '<button class="addbtn" onclick="addPanel()">+ Add panel</button>';
