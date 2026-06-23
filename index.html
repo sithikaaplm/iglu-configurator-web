@@ -351,7 +351,9 @@ function buildDiagram(config) {
   var tallest = Math.max.apply(null, heights);
   var widthSum = widths.reduce(function (a, b) { return a + b; }, 0);
 
-  var totalWmm = 2 * JAMB_SECTION_MM + widthSum + (N - 1) * MULLION_GAP_MM;
+  // Outer allowance = real box edge → gallery distance (62.5mm) so the drawing width
+  // matches boxWidth; the 50mm jamb is centred in it, leaving a gap on each side.
+  var totalWmm = 2 * OUTER_HALF_MM + widthSum + (N - 1) * MULLION_GAP_MM;
   var totalHmm = HEAD_SECTION_MM + tallest + SILL_SECTION_MM;
   var s = Math.min(SVG_MAX_W / totalWmm, SVG_MAX_H / totalHmm);
   var drawW = totalWmm * s, drawH = totalHmm * s;
@@ -369,7 +371,7 @@ function buildDiagram(config) {
 
   // Left edge of each gallery (after the outer jamb and preceding mullions).
   var panelLeftMm = [];
-  var cursorMm = JAMB_SECTION_MM;
+  var cursorMm = OUTER_HALF_MM;
   for (var pj = 0; pj < N; pj++) {
     panelLeftMm.push(cursorMm);
     cursorMm += widths[pj];
@@ -409,9 +411,12 @@ function buildDiagram(config) {
     text({ x:panelX + pw / 2, y:dimY + 16, text:fmt(widths[i]) + "mm", fontSize:10, fill:LABEL_COLOR, textAnchor:"middle" });
   }
 
-  // Outer jambs (orange): left and right edges, each following its own panel.
-  rect({ x:ox, y:galleryTopY, width:JAMB_SECTION_MM * s, height:heights[0] * s, fill:JAMB_FILL });
-  rect({ x:ox + drawW - JAMB_SECTION_MM * s, y:galleryTopY, width:JAMB_SECTION_MM * s, height:heights[N - 1] * s, fill:JAMB_FILL });
+  // Outer jambs (orange): 50mm jamb centred in the 62.5mm outer allowance, so it does
+  // not touch the blades (centred gap each side), running full height from the top of
+  // the head insert down to the bottom of its gallery.
+  var jambInset = (OUTER_HALF_MM - JAMB_SECTION_MM) / 2; // 6.25 — centred gap each side
+  rect({ x:ox + jambInset * s, y:headTopY, width:JAMB_SECTION_MM * s, height:(HEAD_SECTION_MM + heights[0]) * s, fill:JAMB_FILL });
+  rect({ x:ox + drawW - (OUTER_HALF_MM - jambInset) * s, y:headTopY, width:JAMB_SECTION_MM * s, height:(HEAD_SECTION_MM + heights[N - 1]) * s, fill:JAMB_FILL });
 
   // Mullions (pink): 56mm part drawn centred in each internal gap, spanning the taller gallery.
   for (var m = 0; m < N - 1; m++) {
