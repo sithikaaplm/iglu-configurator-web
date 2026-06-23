@@ -240,6 +240,7 @@ var GALLERY_TOP_PAD_MM = 22.5;
 var HEAD_SECTION_MM    = 51;
 var SILL_SECTION_MM    = 52;
 var JAMB_SECTION_MM    = 50;
+var MULLION_SECTION_MM = 56;   // 24300 profile width (drawn centred in the gap)
 var MAX_PANELS = 6;
 
 // Nesting
@@ -363,7 +364,8 @@ function buildDiagram(config) {
 
   var headTopY = oy, galleryTopY = oy + HEAD_SECTION_MM * s;
 
-  rect({ x:ox, y:headTopY, width:drawW, height:HEAD_SECTION_MM * s, fill:HEAD_FILL });
+  // Head inserts (blue) are drawn per gallery below (one 24800 per panel, slightly
+  // wider than the blade and not touching at the mullions).
 
   // Left edge of each gallery (after the outer jamb and preceding mullions).
   var panelLeftMm = [];
@@ -380,10 +382,16 @@ function buildDiagram(config) {
 
     rect({ x:panelX, y:galleryTopY, width:pw, height:ph, fill:GALLERY_FILL, fillOpacity:0.08, stroke:GALLERY_FILL, strokeWidth:0.5 });
 
+    // Head adapter (24800): one per gallery, width = blade + 51, centred — the +51
+    // is well under the mullion gap so adjacent heads never touch.
+    var headW = (widths[i] + HEAD_WIDTH_ADD_MM) * s;
+    rect({ x:panelX + pw / 2 - headW / 2, y:headTopY, width:headW, height:HEAD_SECTION_MM * s, fill:HEAD_FILL });
     text({ x:panelX + pw / 2, y:headTopY + (HEAD_SECTION_MM * s) / 2 + 3, text:"24800 · " + fmt(widths[i] + HEAD_WIDTH_ADD_MM) + "mm", fontSize:8, fill:LABEL_COLOR, textAnchor:"middle" });
 
-    rect({ x:panelX, y:galleryTopY + ph, width:pw, height:SILL_SECTION_MM * s, fill:SILL_FILL });
-
+    // Sill adapter (24820): width = blade + 89, centred — wider than the gallery so
+    // it runs past the mullion (inner) and the outer jamb.
+    var sillW = (widths[i] + SILL_WIDTH_ADD_MM) * s;
+    rect({ x:panelX + pw / 2 - sillW / 2, y:galleryTopY + ph, width:sillW, height:SILL_SECTION_MM * s, fill:SILL_FILL });
     text({ x:panelX + pw / 2, y:galleryTopY + ph + (SILL_SECTION_MM * s) / 2 + 3, text:"24820 · " + fmt(widths[i] + SILL_WIDTH_ADD_MM) + "mm", fontSize:8, fill:LABEL_COLOR, textAnchor:"middle" });
 
     for (var b = 0; b < bladeCount; b++) {
@@ -405,12 +413,13 @@ function buildDiagram(config) {
   rect({ x:ox, y:galleryTopY, width:JAMB_SECTION_MM * s, height:heights[0] * s, fill:JAMB_FILL });
   rect({ x:ox + drawW - JAMB_SECTION_MM * s, y:galleryTopY, width:JAMB_SECTION_MM * s, height:heights[N - 1] * s, fill:JAMB_FILL });
 
-  // Mullions (pink): one in each 28mm internal gap, spanning the taller gallery.
+  // Mullions (pink): 56mm part drawn centred in each internal gap, spanning the taller gallery.
   for (var m = 0; m < N - 1; m++) {
-    var mullX = ox + (panelLeftMm[m] + widths[m]) * s;
+    var mullX = ox + (panelLeftMm[m] + widths[m] + (MULLION_GAP_MM - MULLION_SECTION_MM) / 2) * s;
+    var mullW = MULLION_SECTION_MM * s;
     var mh = Math.max(heights[m], heights[m + 1]);
-    rect({ x:mullX, y:galleryTopY, width:MULLION_GAP_MM * s, height:mh * s, fill:MULLION_FILL });
-    text({ x:mullX + (MULLION_GAP_MM * s) / 2, y:galleryTopY - 4, text:"24300", fontSize:7, fill:MULLION_FILL, textAnchor:"middle" });
+    rect({ x:mullX, y:galleryTopY, width:mullW, height:mh * s, fill:MULLION_FILL });
+    text({ x:mullX + mullW / 2, y:galleryTopY - 4, text:"24300", fontSize:7, fill:MULLION_FILL, textAnchor:"middle" });
   }
 
   (function () {
