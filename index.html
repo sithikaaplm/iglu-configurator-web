@@ -240,14 +240,20 @@ var GALLERY_TOP_PAD_MM = 22.5;
 var HEAD_SECTION_MM    = 51;
 var SILL_SECTION_MM    = 52;
 var JAMB_SECTION_MM    = 50;
+var JAMB_DRAW_MM       = 19;   // visible jamb face in the plan diagram (butts the gallery, no overlap)
 var MULLION_SECTION_MM = 56;   // 24300 profile width (drawn centred in the gap)
 var FRAME_SECTION_MM   = 40;   // 24060 window-frame profile width (wraps the box)
+// Window frame (24060): each member is cut one frame section longer than its box
+// dimension, so cut length = box dimension + 40mm.
+var FRAME_PART_NO     = "24060";
+var FRAME_DESCRIPTION = "IGLU Window frame";
+var FRAME_CUT_ADD_MM  = 40;
 var MAX_PANELS = 6;
 
 // Nesting
 var STOCK_LENGTH = 5000;
 var KERF = 5;
-var EXTRUSION_NAMES = { "24800":"IGLU Head adapter", "24810":"IGLU Jamb adapter", "24820":"IGLU Sill adapter", "24300":"56mm Standard Mullion" };
+var EXTRUSION_NAMES = { "24800":"IGLU Head adapter", "24810":"IGLU Jamb adapter", "24820":"IGLU Sill adapter", "24300":"56mm Standard Mullion", "24060":"IGLU Window frame" };
 
 /* ---------- Compute (src/lib/iglu/compute.ts) ---------- */
 function computeBom(config) {
@@ -293,6 +299,25 @@ function computeBom(config) {
     { partNo:"24810", description:"IGLU Jamb adapter — left outer",  qty:1, cutLength:jambCutLength, formula:jambFormula, deductionFlag:false },
     { partNo:"24810", description:"IGLU Jamb adapter — right outer", qty:1, cutLength:jambCutLength, formula:jambFormula, deductionFlag:false }
   ];
+  // Mullion jamb adapters (24810): two per mullion — one against each adjacent gallery.
+  for (var ji = 0; ji < N - 1; ji++) {
+    jambExtrusions.push({ partNo:"24810", description:"IGLU Jamb adapter — mullion (panels " + (ji+1) + "/" + (ji+2) + ")",
+      qty:2, cutLength:jambCutLength, formula:jambFormula, deductionFlag:false });
+  }
+
+  // Window frame (24060) — wraps the box: 2 head/sill members (box width) + 2 jamb
+  // members (box height). Each member is cut one frame section longer than its box
+  // dimension: cut = box dimension + 40.
+  var fbWidthSum = panels.reduce(function (s, p) { return s + p.bladeWidth; }, 0);
+  var fbBoxWidth = fbWidthSum + (N - 1) * MULLION_GAP_MM + OUTER_BOX_EXTRA_MM;
+  var frameW = fbBoxWidth + FRAME_CUT_ADD_MM;
+  var frameH = jbBoxHeight + FRAME_CUT_ADD_MM;
+  var frameExtrusions = [
+    { partNo: FRAME_PART_NO, description: FRAME_DESCRIPTION + " — head/sill", qty:2, cutLength: frameW, deductionFlag:false,
+      formula: fbBoxWidth + "mm (box width) + " + FRAME_CUT_ADD_MM + "mm = " + frameW + "mm" },
+    { partNo: FRAME_PART_NO, description: FRAME_DESCRIPTION + " — jambs", qty:2, cutLength: frameH, deductionFlag:false,
+      formula: jbBoxHeight + "mm (box height) + " + FRAME_CUT_ADD_MM + "mm = " + frameH + "mm" }
+  ];
 
   // Mullions (24300) — N−1, one between each pair of galleries. Cut spans the
   // taller adjacent gallery; vertical addition unconfirmed → flagged.
@@ -308,10 +333,10 @@ function computeBom(config) {
   var headPackers = { partNo:"19179", description:"Head packer", qty: 2 * N };
   var sillPackerE = { partNo:"19183", description:"Sill packer E (external)", qty: N };
   var sillPackerI = { partNo:"19184", description:"Sill packer I (internal)", qty: N };
-  var jambPackers = { partNo:"19181", description:"Jamb packer", qty: 2 };
+  var jambPackers = { partNo:"19181", description:"Jamb packer", qty: 2 * N };
 
   return { gallerySets:gallerySets, blades:blades, headExtrusions:headExtrusions,
-           sillExtrusions:sillExtrusions, jambExtrusions:jambExtrusions, mullionExtrusions:mullionExtrusions,
+           sillExtrusions:sillExtrusions, jambExtrusions:jambExtrusions, frameExtrusions:frameExtrusions, mullionExtrusions:mullionExtrusions,
            headPackers:headPackers, sillPackerE:sillPackerE, sillPackerI:sillPackerI, jambPackers:jambPackers };
 }
 
@@ -341,7 +366,7 @@ function computeOpening(config) {
 var BLADE_STROKE = "#22d3ee", HEAD_FILL = "#60a5fa", SILL_FILL = "#fbbf24",
     JAMB_FILL = "#fb923c", MULLION_FILL = "#ec4899", GALLERY_FILL = "#a855f7", FRAME_FILL = "#16a34a", LABEL_COLOR = "#1d2733",
     DIM_COLOR = "#5b6b7b", ACCENT = "#2f6f4f";
-var SVG_MAX_W = 560, SVG_MAX_H = 440, MARGIN_L = 116, MARGIN_T = 80, MARGIN_R = 28, MARGIN_B = 44;
+var SVG_MAX_W = 560, SVG_MAX_H = 440, MARGIN_L = 140, MARGIN_T = 104, MARGIN_R = 28, MARGIN_B = 44;
 function fmt(v) { return String(Math.round(v * 10) / 10); }
 
 function buildDiagram(config) {
@@ -358,7 +383,7 @@ function buildDiagram(config) {
   var totalHmm = HEAD_SECTION_MM + tallest + SILL_SECTION_MM;
   var s = Math.min(SVG_MAX_W / totalWmm, SVG_MAX_H / totalHmm);
   var drawW = totalWmm * s, drawH = totalHmm * s;
-  var frameTh = FRAME_SECTION_MM * s; // green 24060 frame band thickness
+  var frameTh = (FRAME_SECTION_MM / 2) * s; // frame extends 20mm beyond the box each side → outer = box + 40
   var ox = MARGIN_L, oy = MARGIN_T;
 
   var items = [];
@@ -380,17 +405,27 @@ function buildDiagram(config) {
     if (pj < N - 1) cursorMm += MULLION_GAP_MM;
   }
 
+  // Per-panel horizontal extents: each gallery is centred between the inner faces of
+  // its flanking jambs, and the blades span the full width to touch those jambs.
+  function mullLeftOf(j)  { return panelLeftMm[j] + widths[j] + (MULLION_GAP_MM - MULLION_SECTION_MM) / 2; }
+  function mullRightOf(j) { return mullLeftOf(j) + MULLION_SECTION_MM; }
+  function innerLOf(i) { return (i === 0)     ? JAMB_DRAW_MM            : mullRightOf(i - 1) + JAMB_DRAW_MM; }
+  function innerROf(i) { return (i === N - 1) ? totalWmm - JAMB_DRAW_MM : mullLeftOf(i) - JAMB_DRAW_MM; }
+
   for (var i = 0; i < N; i++) {
-    var panelX = ox + panelLeftMm[i] * s;
+    var innerLX = ox + innerLOf(i) * s, innerRX = ox + innerROf(i) * s;
+    var galMidX = (innerLX + innerRX) / 2; // centre between the flanking jambs
     var pw = widths[i] * s, ph = heights[i] * s, bladeCount = panels[i].bladeCount;
+    var galleryX = galMidX - pw / 2;
 
-    rect({ x:panelX, y:galleryTopY, width:pw, height:ph, fill:GALLERY_FILL, fillOpacity:0.08, stroke:GALLERY_FILL, strokeWidth:0.5 });
+    // Gallery (light purple) = the opening between the flanking jambs; it fills the
+    // whole gap. The blades sit inside it at their true width.
+    rect({ x:innerLX, y:galleryTopY, width:innerRX - innerLX, height:ph, fill:GALLERY_FILL, fillOpacity:0.08, stroke:GALLERY_FILL, strokeWidth:0.5 });
 
-    // Head adapter (24800): one per gallery, width = blade + 51, centred — the +51
-    // is well under the mullion gap so adjacent heads never touch.
+    // Head adapter (24800): width = blade + 51, centred between the flanking jambs.
     var headW = (widths[i] + HEAD_WIDTH_ADD_MM) * s;
-    rect({ x:panelX + pw / 2 - headW / 2, y:headTopY, width:headW, height:HEAD_SECTION_MM * s, fill:HEAD_FILL });
-    text({ x:panelX + pw / 2, y:headTopY + (HEAD_SECTION_MM * s) / 2 + 3, text:"24800 · " + fmt(widths[i] + HEAD_WIDTH_ADD_MM) + "mm", fontSize:8, fill:LABEL_COLOR, textAnchor:"middle" });
+    rect({ x:galMidX - headW / 2, y:headTopY, width:headW, height:HEAD_SECTION_MM * s, fill:HEAD_FILL });
+    text({ x:galMidX, y:headTopY + (HEAD_SECTION_MM * s) / 2 + 3, text:"24800 · " + fmt(widths[i] + HEAD_WIDTH_ADD_MM) + "mm", fontSize:8, fill:LABEL_COLOR, textAnchor:"middle" });
 
     // Sill adapter (24820): spans its full bay so it meets the green frame on the outer
     // side and the mullion centre on the inner side, reaching down to the green sill.
@@ -398,40 +433,43 @@ function buildDiagram(config) {
     var sillRightX = (i === N - 1) ? ox + drawW : ox + (panelLeftMm[i]     + widths[i]     + MULLION_GAP_MM / 2) * s;
     var sillTopY = galleryTopY + ph;
     rect({ x:sillLeftX, y:sillTopY, width:sillRightX - sillLeftX, height:(oy + drawH) - sillTopY, fill:SILL_FILL });
-    text({ x:panelX + pw / 2, y:sillTopY + (SILL_SECTION_MM * s) / 2 + 3, text:"24820 · " + fmt(widths[i] + SILL_WIDTH_ADD_MM) + "mm", fontSize:8, fill:LABEL_COLOR, textAnchor:"middle" });
+    text({ x:galMidX, y:sillTopY + (SILL_SECTION_MM * s) / 2 + 3, text:"24820 · " + fmt(widths[i] + SILL_WIDTH_ADD_MM) + "mm", fontSize:8, fill:LABEL_COLOR, textAnchor:"middle" });
 
+    // Blades as dashed horizontal lines at the true blade width, inside the gallery (so
+    // they fit within the head insert 24800, sill insert 24820 and the flanking jambs).
     for (var b = 0; b < bladeCount; b++) {
       var by = galleryTopY + (GALLERY_TOP_PAD_MM + b * BLADE_PITCH_MM) * s;
-      line({ x1:panelX + 3, y1:by, x2:panelX + pw - 3, y2:by, stroke:BLADE_STROKE, strokeWidth:1.5, strokeDasharray:"6,4" });
+      line({ x1:galleryX + 3, y1:by, x2:galleryX + pw - 3, y2:by, stroke:BLADE_STROKE, strokeWidth:1.5, strokeDasharray:"6,4" });
     }
 
-    text({ x:panelX + pw / 2, y:galleryTopY + 12, text:bladeCount + " blades", fontSize:9, fill:LABEL_COLOR, textAnchor:"middle" });
-    text({ x:panelX + pw / 2, y:galleryTopY + ph - 6, text:fmt(heights[i]) + "mm", fontSize:9, fill:LABEL_COLOR, textAnchor:"middle" });
+    text({ x:galMidX, y:galleryTopY + 12, text:bladeCount + " blades", fontSize:9, fill:LABEL_COLOR, textAnchor:"middle" });
+    text({ x:galMidX, y:galleryTopY + ph - 6, text:fmt(heights[i]) + "mm", fontSize:9, fill:LABEL_COLOR, textAnchor:"middle" });
 
     var dimY = oy + drawH + frameTh + 16;
-    line({ x1:panelX, y1:dimY, x2:panelX + pw, y2:dimY, stroke:DIM_COLOR, strokeWidth:1 });
-    line({ x1:panelX, y1:dimY - 4, x2:panelX, y2:dimY + 4, stroke:DIM_COLOR, strokeWidth:1 });
-    line({ x1:panelX + pw, y1:dimY - 4, x2:panelX + pw, y2:dimY + 4, stroke:DIM_COLOR, strokeWidth:1 });
-    text({ x:panelX + pw / 2, y:dimY + 16, text:fmt(widths[i]) + "mm", fontSize:10, fill:LABEL_COLOR, textAnchor:"middle" });
+    var dimLX = galMidX - pw / 2, dimRX = galMidX + pw / 2;
+    line({ x1:dimLX, y1:dimY, x2:dimRX, y2:dimY, stroke:DIM_COLOR, strokeWidth:1 });
+    line({ x1:dimLX, y1:dimY - 4, x2:dimLX, y2:dimY + 4, stroke:DIM_COLOR, strokeWidth:1 });
+    line({ x1:dimRX, y1:dimY - 4, x2:dimRX, y2:dimY + 4, stroke:DIM_COLOR, strokeWidth:1 });
+    text({ x:galMidX, y:dimY + 16, text:fmt(widths[i]) + "mm", fontSize:10, fill:LABEL_COLOR, textAnchor:"middle" });
   }
 
-  // Outer jambs (orange): 50mm jamb centred in the 62.5mm outer allowance, so it does
-  // not touch the blades (centred gap each side), running full height from the top of
-  // the head insert down to the bottom of its gallery.
-  var jambInset = (OUTER_HALF_MM - JAMB_SECTION_MM) / 2; // 6.25 — centred gap each side
-  rect({ x:ox + jambInset * s, y:headTopY, width:JAMB_SECTION_MM * s, height:(HEAD_SECTION_MM + heights[0]) * s, fill:JAMB_FILL });
-  rect({ x:ox + drawW - (OUTER_HALF_MM - jambInset) * s, y:headTopY, width:JAMB_SECTION_MM * s, height:(HEAD_SECTION_MM + heights[N - 1]) * s, fill:JAMB_FILL });
+  // Outer jambs (orange): the visible jamb face is 19mm, drawn to scale. Each butts the
+  // inner face of the green frame and extends inward, so the frame touches the jamb
+  // (the to-scale gap falls between the jamb and its gallery), running full height from
+  // the top of the head insert down to the bottom of its gallery.
+  var jambW = JAMB_DRAW_MM * s;
+  rect({ x:ox,                 y:headTopY, width:jambW, height:(HEAD_SECTION_MM + heights[0]) * s, fill:JAMB_FILL });
+  rect({ x:ox + drawW - jambW, y:headTopY, width:jambW, height:(HEAD_SECTION_MM + heights[N - 1]) * s, fill:JAMB_FILL });
 
-  // Internal joints: a jamb (orange) on either side of the mullion filling the gap to
-  // each gallery, and the mullion (pink) running full height to meet the frame.
+  // Internal joints: a 19mm jamb (orange) butts each face of the centred mullion so the
+  // mullion touches the jambs; the to-scale gap falls between each jamb and its gallery.
   for (var m = 0; m < N - 1; m++) {
     var gapLeftMm  = panelLeftMm[m] + widths[m];
     var mullLeftMm = gapLeftMm + (MULLION_GAP_MM - MULLION_SECTION_MM) / 2;
     var mullRightMm = mullLeftMm + MULLION_SECTION_MM;
-    var g2LeftMm = gapLeftMm + MULLION_GAP_MM;
-    // jambs flanking the mullion — small gap to the blades, butting the mullion
-    rect({ x:ox + (gapLeftMm + jambInset) * s, y:headTopY, width:(mullLeftMm - gapLeftMm - jambInset) * s, height:(HEAD_SECTION_MM + heights[m]) * s, fill:JAMB_FILL });
-    rect({ x:ox + mullRightMm * s, y:headTopY, width:(g2LeftMm - jambInset - mullRightMm) * s, height:(HEAD_SECTION_MM + heights[m + 1]) * s, fill:JAMB_FILL });
+    // jambs butting the mullion faces, 19mm, to scale
+    rect({ x:ox + (mullLeftMm - JAMB_DRAW_MM) * s, y:headTopY, width:jambW, height:(HEAD_SECTION_MM + heights[m]) * s, fill:JAMB_FILL });
+    rect({ x:ox + mullRightMm * s,                 y:headTopY, width:jambW, height:(HEAD_SECTION_MM + heights[m + 1]) * s, fill:JAMB_FILL });
     // mullion — full interior height, meets the green frame top & bottom
     var mullX = ox + mullLeftMm * s, mullW = MULLION_SECTION_MM * s;
     rect({ x:mullX, y:oy, width:mullW, height:drawH, fill:MULLION_FILL });
@@ -439,7 +477,7 @@ function buildDiagram(config) {
   }
 
   (function () {
-    var panelX = ox + panelLeftMm[0] * s;
+    var panelX = (ox + innerLOf(0) * s + ox + innerROf(0) * s) / 2 - widths[0] * s / 2;
     var b0y = galleryTopY + GALLERY_TOP_PAD_MM * s;
     var b1y = galleryTopY + (GALLERY_TOP_PAD_MM + BLADE_PITCH_MM) * s;
     var px = panelX + 16;
@@ -458,7 +496,12 @@ function buildDiagram(config) {
     rect({ x:L - frameTh, y:B,           width:drawW + 2 * frameTh, height:frameTh, fill:FRAME_FILL }); // sill
     rect({ x:L - frameTh, y:T, width:frameTh, height:drawH, fill:FRAME_FILL });                          // left jamb
     rect({ x:R,           y:T, width:frameTh, height:drawH, fill:FRAME_FILL });                          // right jamb
-    text({ x:(L + R) / 2, y:T - frameTh / 2 + 3, text:"24060 frame", fontSize:8, fill:"#ffffff", textAnchor:"middle" });
+    // Frame member cut lengths: head/sill = box width + 40, jambs = box height + 40.
+    var frameWcut = opening.boxWidth + FRAME_CUT_ADD_MM;
+    var frameHcut = opening.boxHeight + FRAME_CUT_ADD_MM;
+    text({ x:(L + R) / 2, y:T - frameTh / 2 + 3, text:"24060 · " + fmt(frameWcut) + "mm", fontSize:8, fill:"#ffffff", textAnchor:"middle" });
+    var fjy = (T + B) / 2;
+    text({ x:R + frameTh / 2, y:fjy, text:"24060 · " + fmt(frameHcut) + "mm", fontSize:8, fill:"#ffffff", textAnchor:"middle", transform:"rotate(-90 " + (R + frameTh / 2) + " " + fjy + ")" });
   })();
 
   (function () {
@@ -476,6 +519,23 @@ function buildDiagram(config) {
     line({ x1:x - 4, y1:oy + drawH, x2:x + 4, y2:oy + drawH, stroke:ACCENT, strokeWidth:1 });
     var my = oy + drawH / 2;
     text({ x:x - 4, y:my, text:"box " + fmt(opening.boxHeight) + "mm", fontSize:11, fill:LABEL_COLOR, textAnchor:"middle", transform:"rotate(-90 " + (x - 4) + " " + my + ")" });
+  })();
+
+  // Overall frame outer dimensions (full size = box + 2 frame sections)
+  (function () {
+    var fL = ox - frameTh, fR = ox + drawW + frameTh, y = oy - frameTh - 34;
+    line({ x1:fL, y1:y, x2:fR, y2:y, stroke:FRAME_FILL, strokeWidth:1 });
+    line({ x1:fL, y1:y - 4, x2:fL, y2:y + 4, stroke:FRAME_FILL, strokeWidth:1 });
+    line({ x1:fR, y1:y - 4, x2:fR, y2:y + 4, stroke:FRAME_FILL, strokeWidth:1 });
+    text({ x:(fL + fR) / 2, y:y - 4, text:"frame " + fmt(opening.boxWidth + FRAME_SECTION_MM) + "mm", fontSize:11, fill:FRAME_FILL, textAnchor:"middle" });
+  })();
+  (function () {
+    var fT = oy - frameTh, fB = oy + drawH + frameTh, x = ox - frameTh - 38;
+    line({ x1:x, y1:fT, x2:x, y2:fB, stroke:FRAME_FILL, strokeWidth:1 });
+    line({ x1:x - 4, y1:fT, x2:x + 4, y2:fT, stroke:FRAME_FILL, strokeWidth:1 });
+    line({ x1:x - 4, y1:fB, x2:x + 4, y2:fB, stroke:FRAME_FILL, strokeWidth:1 });
+    var my = (fT + fB) / 2;
+    text({ x:x - 4, y:my, text:"frame " + fmt(opening.boxHeight + FRAME_SECTION_MM) + "mm", fontSize:11, fill:FRAME_FILL, textAnchor:"middle", transform:"rotate(-90 " + (x - 4) + " " + my + ")" });
   })();
 
   return { width: ox + drawW + frameTh + MARGIN_R, height: oy + drawH + frameTh + MARGIN_B, items: items };
@@ -692,6 +752,10 @@ function renderBom(bom, opening) {
     + '<table><thead><tr><th>Part no.</th><th>Description</th><th class="num">Qty</th><th class="num">Cut (mm)</th></tr></thead><tbody>'
     + bomRows(bom.jambExtrusions, true) + '</tbody></table>';
 
+  html += '<div class="sect">Window Frame (24060)</div>'
+    + '<table><thead><tr><th>Part no.</th><th>Description</th><th class="num">Qty</th><th class="num">Cut (mm)</th></tr></thead><tbody>'
+    + bomRows(bom.frameExtrusions, true) + '</tbody></table>';
+
   if (bom.mullionExtrusions && bom.mullionExtrusions.length > 0) {
     html += '<div class="sect">Mullions (24300)</div>'
       + '<table><thead><tr><th>Part no.</th><th>Description</th><th class="num">Qty</th><th class="num">Cut (mm)</th></tr></thead><tbody>'
@@ -750,11 +814,13 @@ function renderDiagramPanel(view) {
     + '<div class="diagcap">Front elevation</div>'
     + '<div class="diagbox">' + renderDiagram(view) + '</div>'
     + '<div class="legend">'
+    + '<span><i style="background:#a855f7"></i>Gallery (louvre panel)</span>'
     + '<span><i style="background:#22d3ee"></i>IGLU blades</span>'
     + '<span><i style="background:#60a5fa"></i>Head insert (24800)</span>'
     + '<span><i style="background:#fbbf24"></i>Sill insert (24820)</span>'
     + '<span><i style="background:#fb923c"></i>Outer jambs (24810)</span>'
     + '<span><i style="background:#ec4899"></i>Mullion (24300)</span>'
+    + '<span><i style="background:#16a34a"></i>Window frame (24060)</span>'
     + '</div></div>';
 }
 
@@ -762,7 +828,7 @@ function render() {
   var bom = computeBom(config);
   var opening = computeOpening(config);
   var view = buildDiagram(config);
-  var rows = bom.headExtrusions.concat(bom.sillExtrusions).concat(bom.jambExtrusions).concat(bom.mullionExtrusions);
+  var rows = bom.headExtrusions.concat(bom.sillExtrusions).concat(bom.jambExtrusions).concat(bom.frameExtrusions).concat(bom.mullionExtrusions);
 
   document.getElementById("left").innerHTML = renderForm();
   document.getElementById("right").innerHTML =
@@ -795,6 +861,8 @@ function exportCsv() {
   bom.sillExtrusions.forEach(function (r) { rows.push(q(r.partNo) + "," + q(r.description) + "," + r.qty + "," + r.cutLength); });
   rows.push(""); rows.push("Jamb Extrusions (24810)"); rows.push("Part No,Description,Qty,Cut Length (mm)");
   bom.jambExtrusions.forEach(function (r) { rows.push(q(r.partNo) + "," + q(r.description) + "," + r.qty + "," + r.cutLength); });
+  rows.push(""); rows.push("Window Frame (24060)"); rows.push("Part No,Description,Qty,Cut Length (mm)");
+  bom.frameExtrusions.forEach(function (r) { rows.push(q(r.partNo) + "," + q(r.description) + "," + r.qty + "," + r.cutLength); });
   if (bom.mullionExtrusions && bom.mullionExtrusions.length > 0) {
     rows.push(""); rows.push("Mullions (24300)"); rows.push("Part No,Description,Qty,Cut Length (mm),Deduction Flag");
     bom.mullionExtrusions.forEach(function (r) { rows.push(q(r.partNo) + "," + q(r.description) + "," + r.qty + "," + r.cutLength + "," + (r.deductionFlag ? "VERIFY" : "")); });
