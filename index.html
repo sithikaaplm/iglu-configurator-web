@@ -463,6 +463,7 @@ function computeOpening(config) {
 // head & sill across the full assembly width; U = total heat loss ÷ total area.
 function computeThermal(config) {
   var panels = config.panels, N = panels.length;
+  if (!N) return null; // defensive — renderBom/exportCsv skip the thermal block
   var perPanel = [], gwSum = 0;
   var hlGlass = 0, hlTransoms = 0, hlPsi = 0;
   for (var i = 0; i < N; i++) {
@@ -757,8 +758,18 @@ function load() {
     if (c && c.bladeWidth && c.panels && c.panels.length) {
       c.grade = "std";
       // Migrate pre-mullion saved configs: backfill per-panel blade width.
-      c.panels = c.panels.map(function (p) {
+      // Drop malformed entries (unknown blade count/width) so a stale or corrupt
+      // saved config can never crash the render.
+      c.panels = c.panels.filter(function (p) {
+        return p && BLADE_HEIGHTS[p.bladeCount] && BLADE_PARTS[p.bladeWidth || c.bladeWidth];
+      }).map(function (p) {
         return { id:p.id, bladeCount:p.bladeCount, bladeWidth:p.bladeWidth || c.bladeWidth };
+      });
+      if (!c.panels.length) return; // nothing valid — keep the default config
+      // Restore the id counter past any saved "pN" ids so new panels never collide.
+      c.panels.forEach(function (p) {
+        var m = /^p(\d+)$/.exec(String(p.id));
+        if (m) panelSeq = Math.max(panelSeq, Number(m[1]));
       });
       config = c;
     }
@@ -786,7 +797,11 @@ function addPanel() {
 }
 function removePanel(id) {
   if (config.panels.length <= 1) return;
-  config.panels = config.panels.filter(function (p) { return p.id !== id; });
+  // Remove only the first match — duplicate ids (from a stale saved config) must
+  // never let one click wipe multiple panels and leave the array empty.
+  for (var i = 0; i < config.panels.length; i++) {
+    if (config.panels[i].id === id) { config.panels.splice(i, 1); break; }
+  }
   onChange();
 }
 
@@ -872,6 +887,7 @@ function renderBom(bom, opening, thermal) {
   }
   html += '</div>';
 
+  if (thermal) {
   html += '<div class="thermal"><div class="ttl">Thermal performance</div>';
   if (thermal.multi) {
     for (var ti = 0; ti < thermal.perPanel.length; ti++) {
@@ -892,6 +908,7 @@ function renderBom(bom, opening, thermal) {
     html += '</div></details>';
   }
   html += '<div class="formula">' + h(thermal.formula) + '</div></div>';
+  }
 
   html += '<div class="sect">Gallery Sets</div>'
     + '<table><thead><tr><th>Part no.</th><th>Description</th><th class="num">Qty</th></tr></thead><tbody>'
@@ -1014,17 +1031,19 @@ function exportCsv() {
   rows.push("Metric,Width (mm),Height (mm)");
   rows.push("Box," + opening.boxWidth + "," + opening.boxHeight);
   rows.push("");
-  rows.push("Thermal Performance" + (thermal.multi ? " (combined = total heat loss / total area)" : ""));
-  rows.push("Metric,Value,Unit");
-  rows.push("U-value," + thermal.u.toFixed(2) + ",W/m2.K");
-  rows.push("R-value," + thermal.r.toFixed(2) + ",m2.K/W");
-  if (thermal.multi) {
-    thermal.perPanel.forEach(function (tp, ti) {
-      rows.push(q("Panel " + (ti + 1) + " (" + tp.width + "mm x " + tp.count + " blades)") + ",U " + tp.u.toFixed(2) + " / R " + tp.r.toFixed(2) + ",");
-    });
+  if (thermal) {
+    rows.push("Thermal Performance" + (thermal.multi ? " (combined = total heat loss / total area)" : ""));
+    rows.push("Metric,Value,Unit");
+    rows.push("U-value," + thermal.u.toFixed(2) + ",W/m2.K");
+    rows.push("R-value," + thermal.r.toFixed(2) + ",m2.K/W");
+    if (thermal.multi) {
+      thermal.perPanel.forEach(function (tp, ti) {
+        rows.push(q("Panel " + (ti + 1) + " (" + tp.width + "mm x " + tp.count + " blades)") + ",U " + tp.u.toFixed(2) + " / R " + tp.r.toFixed(2) + ",");
+      });
+    }
+    thermal.calc.forEach(function (c) { rows.push(q(c.label) + "," + q(c.val) + ","); });
+    rows.push("");
   }
-  thermal.calc.forEach(function (c) { rows.push(q(c.label) + "," + q(c.val) + ","); });
-  rows.push("");
   if (opening.spans && opening.spans.length > 0) {
     rows.push("Mullion Spacing (centres)"); rows.push("Span,Width (mm)");
     opening.spans.forEach(function (sp) { rows.push(q(sp.label) + "," + sp.mm); });
