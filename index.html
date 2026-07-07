@@ -135,7 +135,6 @@
   .diagbox { overflow-x: auto; border: 1px solid #f1f5f9; background: #f8fafc; border-radius: 6px; padding: 8px; }
   .diagbox svg { display: block; }
   .legend { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 14px; font-size: 11px; color: var(--muted); }
-  .legend i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; border: 1px solid rgba(0,0,0,.1); vertical-align: -1px; margin-right: 5px; }
 
   /* Optimiser bars */
   .optgroup { margin-bottom: 18px; }
@@ -998,18 +997,25 @@ function renderOptimiser(rows) {
   return html + '</div>';
 }
 
+// SVG swatch — unlike a CSS background, SVG fill survives printing with
+// "Background graphics" off, so the legend keeps its colours on paper.
+function legendSwatch(color) {
+  return '<svg width="12" height="12" style="vertical-align:-1px;margin-right:5px" aria-hidden="true">'
+    + '<rect width="12" height="12" rx="3" fill="' + color + '" stroke="rgba(0,0,0,.15)"/></svg>';
+}
+
 function renderDiagramPanel(view) {
   return '<div class="panel"><h2>Diagram — to scale</h2>'
     + '<div class="diagcap">Front elevation</div>'
     + '<div class="diagbox">' + renderDiagram(view) + '</div>'
     + '<div class="legend">'
-    + '<span><i style="background:#a855f7"></i>Gallery (louvre panel)</span>'
-    + '<span><i style="background:#22d3ee"></i>IGLU blades</span>'
-    + '<span><i style="background:#60a5fa"></i>Head insert (24800)</span>'
-    + '<span><i style="background:#fbbf24"></i>Sill insert (24820)</span>'
-    + '<span><i style="background:#fb923c"></i>Outer jambs (24810)</span>'
-    + '<span><i style="background:#ec4899"></i>Mullion (24300)</span>'
-    + '<span><i style="background:#16a34a"></i>Window frame (24060)</span>'
+    + '<span>' + legendSwatch(GALLERY_FILL) + 'Gallery (louvre panel)</span>'
+    + '<span>' + legendSwatch(BLADE_STROKE) + 'IGLU blades</span>'
+    + '<span>' + legendSwatch(HEAD_FILL) + 'Head insert (24800)</span>'
+    + '<span>' + legendSwatch(SILL_FILL) + 'Sill insert (24820)</span>'
+    + '<span>' + legendSwatch(JAMB_FILL) + 'Outer jambs (24810)</span>'
+    + '<span>' + legendSwatch(MULLION_FILL) + 'Mullion (24300)</span>'
+    + '<span>' + legendSwatch(FRAME_FILL) + 'Window frame (24060)</span>'
     + '</div></div>';
 }
 
