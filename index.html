@@ -168,6 +168,11 @@
     .sect { break-after: avoid; }
     .diagbox { overflow: visible; }  /* no printed scrollbar track */
     .thermal .calcbox summary { list-style: none; } /* hide the ▶ marker when forced open */
+    /* Keep tinted backgrounds on paper (cut-list extrusion bars, spec cards,
+       section pills) even when the browser's "background graphics" is off. */
+    .seg.cut, .seg.off, .sect, .boxsize, .thermal, .thermal .calc, .hpill {
+      -webkit-print-color-adjust: exact; print-color-adjust: exact;
+    }
   }
 </style>
 </head>
@@ -517,6 +522,14 @@ function computeThermal(config) {
 var BLADE_STROKE = "#22d3ee", HEAD_FILL = "#60a5fa", SILL_FILL = "#fbbf24",
     JAMB_FILL = "#fb923c", MULLION_FILL = "#ec4899", GALLERY_FILL = "#a855f7", FRAME_FILL = "#16a34a", LABEL_COLOR = "#1d2733",
     DIM_COLOR = "#5b6b7b", ACCENT = "#2f6f4f";
+// Extrusion part no. → its colour on the assembled-window diagram. Used to key the
+// BOM section headers and the optimised cut-list bars to the same palette.
+var EXTRUSION_COLOR = { "24800": HEAD_FILL, "24820": SILL_FILL, "24810": JAMB_FILL,
+                        "24060": FRAME_FILL, "24300": MULLION_FILL };
+function tint(hex, alpha) {
+  return "rgba(" + parseInt(hex.substr(1, 2), 16) + "," + parseInt(hex.substr(3, 2), 16)
+    + "," + parseInt(hex.substr(5, 2), 16) + "," + alpha + ")";
+}
 var SVG_MAX_W = 560, SVG_MAX_H = 440, MARGIN_L = 140, MARGIN_T = 104, MARGIN_R = 28, MARGIN_B = 44;
 function fmt(v) { return String(Math.round(v * 10) / 10); }
 
@@ -928,24 +941,24 @@ function renderBom(bom, opening, thermal) {
     + '<table><thead><tr><th>Part no.</th><th>Description</th><th class="num">Qty</th></tr></thead><tbody>'
     + bomRows(bom.blades, false) + '</tbody></table>';
 
-  html += '<div class="sect">Head Extrusions (24800)</div>'
+  html += '<div class="sect">' + legendSwatch(HEAD_FILL) + 'Head Extrusions (24800)</div>'
     + '<table><thead><tr><th>Part no.</th><th>Description</th><th class="num">Qty</th><th class="num">Cut (mm)</th></tr></thead><tbody>'
     + bomRows(bom.headExtrusions, true) + '</tbody></table>';
 
-  html += '<div class="sect">Sill Extrusions (24820)</div>'
+  html += '<div class="sect">' + legendSwatch(SILL_FILL) + 'Sill Extrusions (24820)</div>'
     + '<table><thead><tr><th>Part no.</th><th>Description</th><th class="num">Qty</th><th class="num">Cut (mm)</th></tr></thead><tbody>'
     + bomRows(bom.sillExtrusions, true) + '</tbody></table>';
 
-  html += '<div class="sect">Jamb Extrusions (24810)</div>'
+  html += '<div class="sect">' + legendSwatch(JAMB_FILL) + 'Jamb Extrusions (24810)</div>'
     + '<table><thead><tr><th>Part no.</th><th>Description</th><th class="num">Qty</th><th class="num">Cut (mm)</th></tr></thead><tbody>'
     + bomRows(bom.jambExtrusions, true) + '</tbody></table>';
 
-  html += '<div class="sect">Window Frame (24060)</div>'
+  html += '<div class="sect">' + legendSwatch(FRAME_FILL) + 'Window Frame (24060)</div>'
     + '<table><thead><tr><th>Part no.</th><th>Description</th><th class="num">Qty</th><th class="num">Cut (mm)</th></tr></thead><tbody>'
     + bomRows(bom.frameExtrusions, true) + '</tbody></table>';
 
   if (bom.mullionExtrusions && bom.mullionExtrusions.length > 0) {
-    html += '<div class="sect">Mullions (24300)</div>'
+    html += '<div class="sect">' + legendSwatch(MULLION_FILL) + 'Mullions (24300)</div>'
       + '<table><thead><tr><th>Part no.</th><th>Description</th><th class="num">Qty</th><th class="num">Cut (mm)</th></tr></thead><tbody>'
       + bomRows(bom.mullionExtrusions, true) + '</tbody></table>';
   }
@@ -969,8 +982,11 @@ function renderOptimiser(rows) {
 
   for (var g = 0; g < groups.length; g++) {
     var grp = groups[g];
+    // Key each group to its colour on the assembled-window diagram.
+    var col = EXTRUSION_COLOR[grp.code];
+    var segStyle = col ? ';background:' + tint(col, 0.45) + ';color:#1e293b' : '';
     html += '<div class="optgroup"><div class="head">'
-      + '<h3>' + h(grp.code) + ' <span>— ' + h(grp.name) + '</span></h3>'
+      + '<h3>' + (col ? legendSwatch(col) : '') + h(grp.code) + ' <span>— ' + h(grp.name) + '</span></h3>'
       + '<span class="sticks-needed">' + grp.sticksNeeded + ' × 5 m extrusion' + (grp.sticksNeeded === 1 ? "" : "s") + '</span></div>';
 
     for (var si = 0; si < grp.sticks.length; si++) {
@@ -978,7 +994,7 @@ function renderOptimiser(rows) {
       html += '<div class="stick"><span class="lbl">' + (grp.sticks.length > 1 ? "#" + (si + 1) : "") + '</span><div class="bar">';
       for (var ci = 0; ci < stick.cuts.length; ci++) {
         var len = stick.cuts[ci];
-        html += '<div class="seg cut" style="flex-grow:' + len + ';flex-basis:0" title="' + fmt(len) + 'mm"><span>' + fmt(len) + '</span></div>';
+        html += '<div class="seg cut" style="flex-grow:' + len + ';flex-basis:0' + segStyle + '" title="' + fmt(len) + 'mm"><span>' + fmt(len) + '</span></div>';
       }
       if (stick.offcut > 0) {
         html += '<div class="seg off" style="flex-grow:' + stick.offcut + ';flex-basis:0" title="offcut ' + fmt(stick.offcut) + 'mm"><span>offcut ' + fmt(stick.offcut) + '</span></div>';
