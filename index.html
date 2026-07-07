@@ -158,7 +158,18 @@
 
   .jserr { display: none; background: #fef2f2; color: #991b1b; border: 1px solid #fecaca;
            padding: 12px 16px; font-size: 13px; }
-  @media print { .no-print { display: none !important; } body { background: #fff; } .panel { break-inside: avoid; } }
+  @media print {
+    .no-print { display: none !important; }
+    body { background: #fff; }
+    /* Tall panels (BOM, cut list) must flow across pages — forcing them whole
+       strands the header alone on page 1. Keep the small building blocks intact. */
+    .panel { break-inside: avoid; }
+    .panel.flow { break-inside: auto; }
+    tr, .boxsize, .thermal, .optgroup { break-inside: avoid; }
+    .sect { break-after: avoid; }
+    .diagbox { overflow: visible; }  /* no printed scrollbar track */
+    .thermal .calcbox summary { list-style: none; } /* hide the ▶ marker when forced open */
+  }
 </style>
 </head>
 <body>
@@ -873,7 +884,7 @@ function bomRows(rows, withFormula) {
 }
 
 function renderBom(bom, opening, thermal) {
-  var html = '<div class="panel"><h2>Bill of Materials</h2>';
+  var html = '<div class="panel flow"><h2>Bill of Materials</h2>';
 
   html += '<div class="boxsize"><div class="ttl">Window size (box)</div>'
     + '<div class="row"><dt>Box (W × H)</dt><dd>' + fmt(opening.boxWidth) + ' × ' + fmt(opening.boxHeight) + ' mm</dd></div>';
@@ -952,7 +963,7 @@ function renderBom(bom, opening, thermal) {
 
 function renderOptimiser(rows) {
   var groups = nestExtrusions(rows);
-  var html = '<div class="panel"><h2>Optimised cut list (5 m stock)</h2>'
+  var html = '<div class="panel flow"><h2>Optimised cut list (5 m stock)</h2>'
     + '<p class="intro">Frame extrusions nested into 5 m lengths (first-fit, ' + KERF + 'mm saw kerf). '
     + '<span class="sub">Diagrams are not to scale.</span></p>';
   if (groups.length === 0) { return html + '<p class="intro sub">No extrusions to nest.</p></div>'; }
@@ -1079,10 +1090,28 @@ function exportCsv() {
   URL.revokeObjectURL(url);
 }
 
+/* ---------- Print: show the thermal Full calculation on paper ---------- */
+var __printOpened = [];
+function __beforePrint() {
+  __printOpened = [];
+  var ds = document.querySelectorAll(".thermal details");
+  for (var i = 0; i < ds.length; i++) {
+    if (!ds[i].open) { ds[i].open = true; __printOpened.push(ds[i]); }
+  }
+}
+function __afterPrint() {
+  for (var i = 0; i < __printOpened.length; i++) __printOpened[i].open = false;
+  __printOpened = [];
+}
+
 /* ---------- Wire up ---------- */
 try {
   load();
   render();
+  if (window.addEventListener) {
+    window.addEventListener("beforeprint", __beforePrint);
+    window.addEventListener("afterprint", __afterPrint);
+  }
   window.__ranOK = true;
 } catch (e) {
   __showErr((e && e.message) ? e.message : String(e));
