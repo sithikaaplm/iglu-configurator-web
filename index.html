@@ -95,6 +95,25 @@
   .boxsize .row dt { font-size: 13px; color: var(--muted); }
   .boxsize .row dd { margin: 0; font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; }
 
+  /* Thermal performance block — emerald sibling of .boxsize */
+  .thermal { margin-bottom: 16px; border: 1px solid #a7f3d0; background: #ecfdf5aa; border-radius: 10px; padding: 12px; }
+  .thermal .ttl { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: var(--emerald); margin-bottom: 6px; }
+  .thermal .row { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+  .thermal .row dt { font-size: 13px; color: var(--muted); }
+  .thermal .row dd { margin: 0; font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .thermal .row.per dt, .thermal .row.per dd { font-size: 12px; font-weight: 400; color: #475569; }
+  .thermal .divider { border-top: 1px solid #a7f3d0; margin: 7px 0; }
+  .thermal .calcbox { margin-top: 7px; }
+  .thermal .calcbox summary { cursor: pointer; font-size: 11px; font-weight: 600; color: var(--emerald);
+                              -webkit-user-select: none; user-select: none; }
+  .thermal .calc { margin-top: 5px; padding: 5px 8px; border: 1px solid #d1fae5; border-radius: 5px;
+                   background: #f0fdf4; font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+                   font-size: 10.5px; color: #334155; overflow-x: auto; }
+  .thermal .calc .crow { display: flex; justify-content: space-between; gap: 14px; padding: 1px 0;
+                         white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .thermal .calc .crow.total { border-top: 1px solid #d1fae5; margin-top: 3px; padding-top: 3px; font-weight: 600; }
+  .thermal .formula { margin-top: 5px; }
+
   /* Tables */
   .sect { margin: 14px 0 4px; padding: 5px 10px; border-radius: 5px; background: #eff6ff;
           font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .03em; color: var(--blue7); }
@@ -178,6 +197,82 @@ var BLADE_PARTS = {
   800:{partNo:"800-IGLU",description:"800mm IGLU 152mm Stronghold Blade"},
   1127:{partNo:"1127-IGLU",description:"1127mm IGLU 152mm Stronghold Blade"}
 };
+
+/* Thermal model — direct port of the "Breezeway Louver Calc APL" workbook.
+ * The four width sheets (300/500/800/1127) share identical constants apart from
+ * glass width (= blade width − 44.5). Verified: reproduces all 160 summary-sheet
+ * U/R values exactly. U = total heat loss ÷ overall area, R = 1/U. */
+var TH = {
+  GLASS_H: 128,                                     // glass (blade) height, mm
+  PSI_SILL: 0.039, PSI_HEAD: 0.037, PSI_JAMB: 0.07, PSI_TRANSOM: 0.044, // ΨG edge losses, W/m.K
+  U_GLASS: 1.4,                                     // UG, W/m2.K
+  UF_JAMB: 4.271, UF_SILL: 3.271, UF_HEAD: 4.009, UF_TRANSOM: 2.839,    // frame U-factors, W/m2.K
+  FH_JAMB: 84, FH_SILL: 99, FH_HEAD: 63, FH_TRANSOM: 12.5,              // frame heights, mm
+  WS_COVER: 31,                                     // sill weather strip cover, mm
+  GLASS_W_DEDUCT: 44.5                              // blade width − glass width, mm
+};
+
+// Overall height for a blade count (workbook column F).
+function thermalHeight(n) {
+  return n * TH.GLASS_H + (n - 1) * TH.FH_TRANSOM + TH.FH_SILL + TH.FH_HEAD - TH.WS_COVER;
+}
+
+// Per-panel infill heat losses (glass + horizontal transoms + ΨG edge transitions) —
+// the workbook's columns J, M and N for one panel of a given blade width & count.
+function thermalInfill(bladeWidth, n) {
+  var gw = bladeWidth - TH.GLASS_W_DEDUCT; // glass width
+  var hlTransoms = ((n - 1) * gw * TH.FH_TRANSOM / 1e6) * TH.UF_TRANSOM;
+  var areaGlass = ((n - 1) * TH.GLASS_H * gw + gw * (TH.GLASS_H - TH.WS_COVER)) / 1e6;
+  var hlGlass = areaGlass * TH.U_GLASS;
+  var hlPsi = (gw / 1000) * (TH.PSI_SILL + TH.PSI_HEAD + 2 * TH.PSI_TRANSOM)
+    + (TH.GLASS_H / 1000) * TH.PSI_JAMB * 2
+    + ((TH.GLASS_H - TH.WS_COVER) / 1000) * TH.PSI_JAMB * 2
+    + (n - 2) * ((TH.GLASS_H / 1000) * 2 * TH.PSI_JAMB + (gw / 1000) * 2 * TH.PSI_TRANSOM);
+  return { gw: gw, hlGlass: hlGlass, hlTransoms: hlTransoms, hlPsi: hlPsi };
+}
+
+// One louvre unit — replicates the workbook's columns E..P for any blade width & count.
+function thermalUnit(bladeWidth, n) {
+  var inf = thermalInfill(bladeWidth, n);
+  var overallW = inf.gw + 2 * TH.FH_JAMB;                       // overall width (internal liners)
+  var overallH = thermalHeight(n);
+
+  var hlHead = (overallW * TH.FH_HEAD / 1e6) * TH.UF_HEAD;
+  var hlSill = (overallW * TH.FH_SILL / 1e6) * TH.UF_SILL;
+  var hlJambs = (2 * (overallH - TH.FH_SILL - TH.FH_HEAD) * TH.FH_JAMB / 1e6) * TH.UF_JAMB;
+
+  var heatLoss = hlJambs + hlHead + hlSill + inf.hlGlass + inf.hlPsi + inf.hlTransoms; // W/K
+  var area = overallH * overallW / 1e6;                                                // m²
+  return { u: heatLoss / area, heatLoss: heatLoss, area: area,
+           overallW: overallW, overallH: overallH,
+           hlJambs: hlJambs, hlHead: hlHead, hlSill: hlSill, inf: inf };
+}
+
+// Full-calculation breakdown lines (label/value) shared by the UI expander and CSV.
+function thermalCalcLines(d) {
+  // d: { overallW, overallH, area, hlJambs, hlMullions?, hlHead, hlSill,
+  //      hlGlass, hlTransoms, hlPsi, heatLoss, u, mullionCount? }
+  var jambH = d.overallH - TH.FH_SILL - TH.FH_HEAD;
+  var lines = [
+    { label: "Overall size (W × H)", val: d.overallW + " × " + d.overallH + " mm" },
+    { label: "Area A = W × H", val: d.area.toFixed(3) + " m²" },
+    { label: "HL jambs — 2 × " + jambH + " × " + TH.FH_JAMB + "mm × Uf " + TH.UF_JAMB, val: d.hlJambs.toFixed(3) + " W/K" }
+  ];
+  if (d.mullionCount) {
+    lines.push({ label: "HL mullions — " + d.mullionCount + " × " + jambH + " × " + TH.FH_TRANSOM + "mm × Uf " + TH.UF_TRANSOM + " (transom section)", val: d.hlMullions.toFixed(3) + " W/K" });
+  }
+  lines.push(
+    { label: "HL head — " + d.overallW + " × " + TH.FH_HEAD + "mm × Uf " + TH.UF_HEAD, val: d.hlHead.toFixed(3) + " W/K" },
+    { label: "HL sill — " + d.overallW + " × " + TH.FH_SILL + "mm × Uf " + TH.UF_SILL, val: d.hlSill.toFixed(3) + " W/K" },
+    { label: "HL glass — " + (d.hlGlass / TH.U_GLASS).toFixed(3) + " m² × UG " + TH.U_GLASS, val: d.hlGlass.toFixed(3) + " W/K" },
+    { label: "HL blade transoms — (blades−1) × glass width × " + TH.FH_TRANSOM + "mm × Uf " + TH.UF_TRANSOM, val: d.hlTransoms.toFixed(3) + " W/K" },
+    { label: "HL ΨG edge transitions (sill/head/jamb/transom)", val: d.hlPsi.toFixed(3) + " W/K" },
+    { label: "Total heat loss HL", val: d.heatLoss.toFixed(3) + " W/K", total: true },
+    { label: "U = HL ÷ A", val: d.u.toFixed(2) + " W/m²K", total: true },
+    { label: "R = 1 ÷ U", val: (1 / d.u).toFixed(2) + " m²K/W", total: true }
+  );
+  return lines;
+}
 
 // [bladeCount, stdStd, stdOffStd, keylockStd, keylockOffStd]
 var RAW_GALLERY = [
@@ -360,6 +455,51 @@ function computeOpening(config) {
     }
   }
   return { boxWidth: boxWidth, boxHeight: boxHeight, spans: spans };
+}
+
+// Thermal — pure, mirrors computeOpening(). Per panel: exact workbook U/R for that
+// unit. Combined (multi-panel): the workbook's method applied to the whole assembly —
+// 2 outer jambs, (N−1) vertical mullions between panels (mullion = transom section),
+// head & sill across the full assembly width; U = total heat loss ÷ total area.
+function computeThermal(config) {
+  var panels = config.panels, N = panels.length;
+  var perPanel = [], gwSum = 0;
+  var hlGlass = 0, hlTransoms = 0, hlPsi = 0;
+  for (var i = 0; i < N; i++) {
+    var p = panels[i];
+    var t = thermalUnit(p.bladeWidth, p.bladeCount);
+    perPanel.push({ width: p.bladeWidth, count: p.bladeCount, u: t.u, r: 1 / t.u });
+    var inf = thermalInfill(p.bladeWidth, p.bladeCount);
+    gwSum += inf.gw; hlGlass += inf.hlGlass; hlTransoms += inf.hlTransoms; hlPsi += inf.hlPsi;
+  }
+  if (N === 1) {
+    var single = thermalUnit(panels[0].bladeWidth, panels[0].bladeCount);
+    return { perPanel: perPanel, multi: false, u: single.u, r: 1 / single.u,
+             calc: thermalCalcLines({ overallW: single.overallW, overallH: single.overallH,
+               area: single.area, hlJambs: single.hlJambs, hlHead: single.hlHead, hlSill: single.hlSill,
+               hlGlass: single.inf.hlGlass, hlTransoms: single.inf.hlTransoms, hlPsi: single.inf.hlPsi,
+               heatLoss: single.heatLoss, u: single.u }),
+             formula: panels[0].bladeWidth + "mm blade × " + panels[0].bladeCount + " blades" };
+  }
+  var overallH = thermalHeight(panels[0].bladeCount); // blade count is shared across panels
+  var overallW = gwSum + 2 * TH.FH_JAMB + (N - 1) * TH.FH_TRANSOM;
+  var jambH = overallH - TH.FH_SILL - TH.FH_HEAD;
+  var hlJambs = (2 * jambH * TH.FH_JAMB / 1e6) * TH.UF_JAMB;
+  var hlMullions = ((N - 1) * jambH * TH.FH_TRANSOM / 1e6) * TH.UF_TRANSOM;
+  var hlHead = (overallW * TH.FH_HEAD / 1e6) * TH.UF_HEAD;
+  var hlSill = (overallW * TH.FH_SILL / 1e6) * TH.UF_SILL;
+  var heatLoss = hlJambs + hlMullions + hlHead + hlSill + hlGlass + hlPsi + hlTransoms;
+  var area = overallH * overallW / 1e6;
+  var u = heatLoss / area, r = 1 / u;
+  return {
+    perPanel: perPanel, multi: true, u: u, r: r,
+    calc: thermalCalcLines({ overallW: overallW, overallH: overallH, area: area,
+      hlJambs: hlJambs, hlMullions: hlMullions, mullionCount: N - 1,
+      hlHead: hlHead, hlSill: hlSill, hlGlass: hlGlass, hlTransoms: hlTransoms, hlPsi: hlPsi,
+      heatLoss: heatLoss, u: u }),
+    formula: "assembly: 2 outer jambs + " + (N - 1) + " mullion" + (N > 2 ? "s" : "")
+      + " (transom section) + full-width head & sill"
+  };
 }
 
 /* ---------- Diagram (src/lib/iglu/diagram.ts) ---------- */
@@ -717,7 +857,7 @@ function bomRows(rows, withFormula) {
   return out;
 }
 
-function renderBom(bom, opening) {
+function renderBom(bom, opening, thermal) {
   var html = '<div class="panel"><h2>Bill of Materials</h2>';
 
   html += '<div class="boxsize"><div class="ttl">Window size (box)</div>'
@@ -731,6 +871,27 @@ function renderBom(bom, opening) {
     html += '</div>';
   }
   html += '</div>';
+
+  html += '<div class="thermal"><div class="ttl">Thermal performance</div>';
+  if (thermal.multi) {
+    for (var ti = 0; ti < thermal.perPanel.length; ti++) {
+      var tp = thermal.perPanel[ti];
+      html += '<div class="row per"><dt>Panel ' + (ti + 1) + ' · ' + tp.width + ' mm · ' + tp.count + ' blades</dt>'
+        + '<dd>U ' + tp.u.toFixed(2) + ' · R ' + tp.r.toFixed(2) + '</dd></div>';
+    }
+    html += '<div class="divider"></div>';
+  }
+  html += '<div class="row"><dt>' + (thermal.multi ? 'Combined U-value' : 'U-value') + '</dt><dd>' + thermal.u.toFixed(2) + ' W/m²K</dd></div>'
+    + '<div class="row"><dt>' + (thermal.multi ? 'Combined R-value' : 'R-value') + '</dt><dd>' + thermal.r.toFixed(2) + ' m²K/W</dd></div>';
+  if (thermal.calc) {
+    html += '<details class="calcbox"><summary>Full calculation</summary><div class="calc">';
+    for (var ci = 0; ci < thermal.calc.length; ci++) {
+      var cl = thermal.calc[ci];
+      html += '<div class="crow' + (cl.total ? ' total' : '') + '"><span>' + h(cl.label) + '</span><span>' + h(cl.val) + '</span></div>';
+    }
+    html += '</div></details>';
+  }
+  html += '<div class="formula">' + h(thermal.formula) + '</div></div>';
 
   html += '<div class="sect">Gallery Sets</div>'
     + '<table><thead><tr><th>Part no.</th><th>Description</th><th class="num">Qty</th></tr></thead><tbody>'
@@ -827,24 +988,42 @@ function renderDiagramPanel(view) {
 function render() {
   var bom = computeBom(config);
   var opening = computeOpening(config);
+  var thermal = computeThermal(config);
   var view = buildDiagram(config);
   var rows = bom.headExtrusions.concat(bom.sillExtrusions).concat(bom.jambExtrusions).concat(bom.frameExtrusions).concat(bom.mullionExtrusions);
 
   document.getElementById("left").innerHTML = renderForm();
   document.getElementById("right").innerHTML =
-    renderBom(bom, opening) + renderDiagramPanel(view) + renderOptimiser(rows);
+    renderBom(bom, opening, thermal) + renderDiagramPanel(view) + renderOptimiser(rows);
 }
 
 function onChange() { save(); render(); }
 
 /* ---------- CSV export (mirrors src/components/iglu/Configurator.tsx buildCsv) ---------- */
 function exportCsv() {
-  var bom = computeBom(config), opening = computeOpening(config);
-  function q(s) { return '"' + String(s).replace(/"/g, '""') + '"'; }
+  var bom = computeBom(config), opening = computeOpening(config), thermal = computeThermal(config);
+  // Excel (Windows) reads BOM-less CSV as ANSI; ASCII-fold the symbols the thermal
+  // labels use (×, ², Ψ, ÷, −, —) so cells stay readable in any consumer.
+  function ascii(s) {
+    return String(s).replace(/×/g, "x").replace(/²/g, "2").replace(/Ψ/g, "Psi")
+      .replace(/÷/g, "/").replace(/−/g, "-").replace(/—/g, "-").replace(/·/g, "-");
+  }
+  function q(s) { return '"' + ascii(s).replace(/"/g, '""') + '"'; }
   var rows = [];
   rows.push("Window Size (Box)");
   rows.push("Metric,Width (mm),Height (mm)");
   rows.push("Box," + opening.boxWidth + "," + opening.boxHeight);
+  rows.push("");
+  rows.push("Thermal Performance" + (thermal.multi ? " (combined = total heat loss / total area)" : ""));
+  rows.push("Metric,Value,Unit");
+  rows.push("U-value," + thermal.u.toFixed(2) + ",W/m2.K");
+  rows.push("R-value," + thermal.r.toFixed(2) + ",m2.K/W");
+  if (thermal.multi) {
+    thermal.perPanel.forEach(function (tp, ti) {
+      rows.push(q("Panel " + (ti + 1) + " (" + tp.width + "mm x " + tp.count + " blades)") + ",U " + tp.u.toFixed(2) + " / R " + tp.r.toFixed(2) + ",");
+    });
+  }
+  thermal.calc.forEach(function (c) { rows.push(q(c.label) + "," + q(c.val) + ","); });
   rows.push("");
   if (opening.spans && opening.spans.length > 0) {
     rows.push("Mullion Spacing (centres)"); rows.push("Span,Width (mm)");
@@ -871,8 +1050,9 @@ function exportCsv() {
   [bom.headPackers, bom.sillPackerE, bom.sillPackerI, bom.jambPackers].forEach(function (r) {
     rows.push(q(r.partNo) + "," + q(r.description) + "," + r.qty);
   });
-  var csv = rows.join("\n");
-  var blob = new Blob([csv], { type:"text/csv" });
+  var csv = rows.join("\r\n");
+  // UTF-8 BOM so Excel on Windows decodes the file as UTF-8 instead of ANSI.
+  var blob = new Blob([String.fromCharCode(0xFEFF) + csv], { type:"text/csv;charset=utf-8" });
   var url = URL.createObjectURL(blob);
   var a = document.createElement("a");
   a.href = url; a.download = "iglu_" + config.panels.length + "panel_" + config.bladeWidth + "mm.csv";
