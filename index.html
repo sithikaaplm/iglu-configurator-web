@@ -271,7 +271,7 @@ function thermalCalcLines(d) {
   var lines = [
     { label: "Overall size (W × H)", val: d.overallW + " × " + d.overallH + " mm" },
     { label: "Area A = W × H", val: d.area.toFixed(3) + " m²" },
-    { label: "HL jambs — 2 × " + jambH + " × " + TH.FH_JAMB + "mm × Uf " + TH.UF_JAMB, val: d.hlJambs.toFixed(3) + " W/K" }
+    { label: "HL jambs — " + (d.jambCount || 2) + " × " + jambH + " × " + TH.FH_JAMB + "mm × Uf " + TH.UF_JAMB, val: d.hlJambs.toFixed(3) + " W/K" }
   ];
   if (d.mullionCount) {
     lines.push({ label: "HL mullions — " + d.mullionCount + " × " + jambH + " × " + TH.FH_TRANSOM + "mm × Uf " + TH.UF_TRANSOM + " (transom section)", val: d.hlMullions.toFixed(3) + " W/K" });
@@ -498,9 +498,10 @@ function computeThermal(config) {
              formula: panels[0].bladeWidth + "mm blade × " + panels[0].bladeCount + " blades" };
   }
   var overallH = thermalHeight(panels[0].bladeCount); // blade count is shared across panels
-  var overallW = gwSum + 2 * TH.FH_JAMB + (N - 1) * TH.FH_TRANSOM;
+  var jambCount = 2 * N;                                // 2 outer + 2 per mullion (N−1 mullions)
+  var overallW = gwSum + jambCount * TH.FH_JAMB + (N - 1) * TH.FH_TRANSOM;
   var jambH = overallH - TH.FH_SILL - TH.FH_HEAD;
-  var hlJambs = (2 * jambH * TH.FH_JAMB / 1e6) * TH.UF_JAMB;
+  var hlJambs = (jambCount * jambH * TH.FH_JAMB / 1e6) * TH.UF_JAMB;
   var hlMullions = ((N - 1) * jambH * TH.FH_TRANSOM / 1e6) * TH.UF_TRANSOM;
   var hlHead = (overallW * TH.FH_HEAD / 1e6) * TH.UF_HEAD;
   var hlSill = (overallW * TH.FH_SILL / 1e6) * TH.UF_SILL;
@@ -510,11 +511,11 @@ function computeThermal(config) {
   return {
     perPanel: perPanel, multi: true, u: u, r: r,
     calc: thermalCalcLines({ overallW: overallW, overallH: overallH, area: area,
-      hlJambs: hlJambs, hlMullions: hlMullions, mullionCount: N - 1,
+      hlJambs: hlJambs, hlMullions: hlMullions, mullionCount: N - 1, jambCount: jambCount,
       hlHead: hlHead, hlSill: hlSill, hlGlass: hlGlass, hlTransoms: hlTransoms, hlPsi: hlPsi,
       heatLoss: heatLoss, u: u }),
     formula: "assembly: 2 outer jambs + " + (N - 1) + " mullion" + (N > 2 ? "s" : "")
-      + " (transom section) + full-width head & sill"
+      + " (transom + 2 jambs each) + full-width head & sill"
   };
 }
 
