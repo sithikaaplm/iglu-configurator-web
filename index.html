@@ -149,6 +149,7 @@
          font-variant-numeric: tabular-nums; padding: 0 2px; }
   .seg.cut { background: #bae6fd; color: #0c4a6e; border-right: 1px solid rgba(255,255,255,.8); min-width: 2.75rem; }
   .seg.off { background: #f1f5f9; color: var(--muted2); font-style: italic; }
+  .seg.trim { flex-shrink: 0; min-width: 6px; background-image: repeating-linear-gradient(45deg, #fecdd3 0 3px, #fda4af 3px 6px); }
   .seg span { white-space: nowrap; text-overflow: ellipsis; overflow: hidden; }
   .optfoot { margin-top: 6px; font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
   .optwarn { margin-top: 4px; font-size: 11px; font-weight: 500; color: var(--orange); }
@@ -362,6 +363,8 @@ var MAX_PANELS = 6;
 
 // Nesting
 var STOCK_LENGTH = 5000;
+var END_TRIM = 50;                             // 50mm trimmed off each end (mill ends)
+var USABLE_LENGTH = STOCK_LENGTH - 2 * END_TRIM; // 4900mm usable per 5 m stock
 var KERF = 5;
 var EXTRUSION_NAMES = { "24800":"IGLU Head adapter", "24810":"IGLU Jamb adapter", "24820":"IGLU Sill adapter", "24300":"56mm Standard Mullion", "24060":"IGLU Window frame" };
 
@@ -748,15 +751,15 @@ function nestExtrusions(rows) {
     var sorted = pieces.slice().sort(function (a, b) { return b - a; });
     for (var p = 0; p < sorted.length; p++) {
       var len = sorted[p], need = len + KERF;
-      if (need > STOCK_LENGTH) { oversized.push(len); continue; }
+      if (need > USABLE_LENGTH) { oversized.push(len); continue; }
       var placed = null;
       for (var st = 0; st < sticks.length; st++) {
-        if (sticks[st].used + need <= STOCK_LENGTH) { placed = sticks[st]; break; }
+        if (sticks[st].used + need <= USABLE_LENGTH) { placed = sticks[st]; break; }
       }
       if (placed) { placed.cuts.push(len); placed.used += need; }
-      else { sticks.push({ cuts:[len], used:need, offcut:0 }); }
+      else { sticks.push({ cuts:[len], used:need, offcut:0, trim: 2 * END_TRIM }); }
     }
-    for (var si = 0; si < sticks.length; si++) sticks[si].offcut = STOCK_LENGTH - sticks[si].used;
+    for (var si = 0; si < sticks.length; si++) sticks[si].offcut = USABLE_LENGTH - sticks[si].used;
     var totalLen = pieces.reduce(function (a, b) { return a + b; }, 0) - oversized.reduce(function (a, b) { return a + b; }, 0);
     groups.push({
       code: code, name: EXTRUSION_NAMES[code] || code, sticks: sticks,
@@ -992,7 +995,8 @@ function renderOptimiser(rows) {
 
     for (var si = 0; si < grp.sticks.length; si++) {
       var stick = grp.sticks[si];
-      html += '<div class="stick"><span class="lbl">' + (grp.sticks.length > 1 ? "#" + (si + 1) : "") + '</span><div class="bar">';
+      var trimCap = '<div class="seg trim" style="flex-grow:' + END_TRIM + ';flex-basis:0" title="end trim ' + END_TRIM + 'mm — saw waste"></div>';
+      html += '<div class="stick"><span class="lbl">' + (grp.sticks.length > 1 ? "#" + (si + 1) : "") + '</span><div class="bar">' + trimCap;
       for (var ci = 0; ci < stick.cuts.length; ci++) {
         var len = stick.cuts[ci];
         html += '<div class="seg cut" style="flex-grow:' + len + ';flex-basis:0' + segStyle + '" title="' + fmt(len) + 'mm"><span>' + fmt(len) + '</span></div>';
@@ -1000,14 +1004,15 @@ function renderOptimiser(rows) {
       if (stick.offcut > 0) {
         html += '<div class="seg off" style="flex-grow:' + stick.offcut + ';flex-basis:0" title="offcut ' + fmt(stick.offcut) + 'mm"><span>offcut ' + fmt(stick.offcut) + '</span></div>';
       }
-      html += '</div></div>';
+      html += trimCap + '</div></div>';
     }
 
     html += '<p class="optfoot">' + grp.pieceCount + ' piece' + (grp.pieceCount === 1 ? "" : "s")
-      + ' · ' + fmt(grp.totalLength) + 'mm cut · ' + fmt(grp.offcutTotal) + 'mm offcut</p>';
+      + ' · ' + fmt(grp.totalLength) + 'mm cut · ' + fmt(grp.offcutTotal) + 'mm offcut · '
+      + '<span style="color:#e11d48">' + fmt(grp.sticksNeeded * 2 * END_TRIM) + 'mm end-trim</span></p>';
     if (grp.oversized.length > 0) {
       html += '<p class="optwarn">⚠ ' + grp.oversized.length + ' piece' + (grp.oversized.length === 1 ? "" : "s")
-        + ' longer than a 5 m stock length (' + grp.oversized.map(fmt).join(", ") + 'mm) — cannot be cut from one length.</p>';
+        + ' longer than the usable 4.9 m length (' + grp.oversized.map(fmt).join(", ") + 'mm) — cannot be cut from one length.</p>';
     }
     html += '</div>';
   }
