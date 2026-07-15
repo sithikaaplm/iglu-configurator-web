@@ -48,6 +48,17 @@
   .grid { display: grid; gap: 20px; grid-template-columns: 300px 1fr; align-items: start; }
   @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
   .col { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+  /* Tab bar (mirrors the Box Fin "Dimension & assembly information" tab) */
+  .tabs { display: flex; background: #fff; border-bottom: 1px solid var(--line); padding: 0 24px; }
+  .tabbtn { appearance: none; background: none; border: none; border-bottom: 2px solid transparent;
+    padding: 12px 16px; font-size: 14px; font-weight: 500; color: var(--muted); cursor: pointer; white-space: nowrap; }
+  .tabbtn:hover { color: #334155; border-bottom-color: var(--line2); }
+  .tabbtn.active { color: var(--blue); border-bottom-color: var(--blue); }
+  /* Dimension & assembly information cards */
+  .reswrap { max-width: 960px; margin: 0 auto; }
+  .reslist { display: flex; flex-direction: column; gap: 16px; }
+  .resimg { display: block; width: 100%; height: auto; border: 1px solid var(--line); border-radius: 6px; }
+  .rescap { margin: 12px 0 0; font-size: 13px; color: var(--muted); line-height: 1.5; }
   .panel { min-width: 0; background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 18px; }
   .panel h2 {
     margin: 0 0 12px; font-size: 13px; font-weight: 600; text-transform: uppercase;
@@ -191,12 +202,73 @@
   <p>Select blade width and panel blade counts to generate a Bill of Materials.</p>
 </header>
 
-<div class="wrap">
+<nav class="tabs">
+  <button class="tabbtn active" data-tab="config">Configurator</button>
+  <button class="tabbtn" data-tab="resources">Dimension &amp; assembly information</button>
+</nav>
+
+<div class="wrap" id="tab-config">
   <div class="grid">
     <div class="col" id="left"></div>
     <div class="col" id="right"></div>
   </div>
 </div>
+
+<div class="wrap reswrap" id="tab-resources" style="display:none">
+  <div class="reslist">
+      <div class="panel">
+        <h2>IGLU Breezway Sectional Details</h2>
+        <img class="resimg" src="assets/iglu-sectional-details.png" alt="IGLU Breezway Sectional Details">
+        <p class="rescap">Elevation with horizontal and vertical cross-sections showing how the Overall, Box, Platform and Gallery sizes relate — head 24800, jamb 24810, sill 24820 and window-frame 24060 sections all labelled. Not to scale.</p>
+      </div>
+      <div class="panel">
+        <h2>Machining &amp; Drainage Details</h2>
+        <img class="resimg" src="assets/iglu-machining-drainage.png" alt="Machining &amp; Drainage Details">
+        <p class="rescap">Jamb leg removal (20mm, by hacksaw or pliers — no CNC), head drainage holes (6⌀ ×2 at either end), sill weep slots (20 × 3.5 at either end), the wet-seal run along the sill and up the jambs, and jamb fixings (self-drilling 25mm pan screws at 450mm centres).</p>
+      </div>
+      <div class="panel">
+        <h2>Assembly Installation Details 1 to 2</h2>
+        <img class="resimg" src="assets/iglu-assembly-1-2.png" alt="Assembly Installation Details 1 to 2">
+        <p class="rescap">Steps 1–2 of the colour-coded assembly sequence: Yellow sill insert, Orange jamb inserts, Blue head insert, Purple galleries, Red weather-bar profiles, then insert the IGLU blades. Full legend shown on the sheet.</p>
+      </div>
+      <div class="panel">
+        <h2>Assembly Installation Details 3 to 4</h2>
+        <img class="resimg" src="assets/iglu-assembly-3-4.png" alt="Assembly Installation Details 3 to 4">
+        <p class="rescap">Steps 3–4: head insert clipped in and purple gallery profiles clipped on top of the jamb inserts, running between the sill and head inserts.</p>
+      </div>
+      <div class="panel">
+        <h2>Assembly Installation Details 5 to 6</h2>
+        <img class="resimg" src="assets/iglu-assembly-5-6.png" alt="Assembly Installation Details 5 to 6">
+        <p class="rescap">Steps 5–6: red weather-bar profiles clipped into the sill and head inserts, then the IGLU blades inserted — completing the gallery set inside the frame.</p>
+      </div>
+      <div class="panel">
+        <h2>APL Sections</h2>
+        <img class="resimg" src="assets/iglu-apl-sections.png" alt="APL Sections">
+        <p class="rescap">The fully assembled IGLU set shown in elevation plus head/sill and jamb cross-sections within the 24060 window frame, with the glass blades drawn in. Reference for how every profile sits together.</p>
+      </div>
+      <div class="panel">
+        <h2>Breezway Sections &amp; Seals</h2>
+        <img class="resimg" src="assets/iglu-breezway-sections-seals.png" alt="Breezway Sections &amp; Seals">
+        <p class="rescap">The Breezway component profiles: IGLU Head and Sill weatherstrips, Gallery, Clip, the coextruded PVC seal (rigid &amp; flexible) and the standard coextrusion weatherseal.</p>
+      </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  var btns = document.getElementsByClassName('tabbtn');
+  function show(t) {
+    for (var i = 0; i < btns.length; i++) {
+      btns[i].className = 'tabbtn' + (btns[i].getAttribute('data-tab') === t ? ' active' : '');
+    }
+    document.getElementById('tab-config').style.display = (t === 'config') ? '' : 'none';
+    document.getElementById('tab-resources').style.display = (t === 'resources') ? '' : 'none';
+  }
+  for (var i = 0; i < btns.length; i++) {
+    (function (b) { b.onclick = function () { show(b.getAttribute('data-tab')); }; })(btns[i]);
+  }
+})();
+</script>
 
 <script>
 /* ====================================================================== *
