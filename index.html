@@ -109,6 +109,10 @@
   /* Platform (structural opening) block — indigo sibling of .boxsize */
   .platform { margin-bottom: 16px; border: 1px solid #c7d2fe; background: #eef2ffaa; border-radius: 10px; padding: 12px; }
   .platform .ttl { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: #4338ca; margin-bottom: 6px; }
+  .calclink { display: inline-block; margin-top: 8px; padding: 0; background: none; border: none;
+    font-size: 11px; font-weight: 500; color: #4338ca; text-decoration: underline;
+    text-decoration-color: #a5b4fc; text-underline-offset: 2px; cursor: pointer; text-align: left; }
+  .calclink:hover { color: #3730a3; }
   .platform .row { display: flex; justify-content: space-between; align-items: baseline; }
   .platform .row dt { font-size: 13px; color: var(--muted); }
   .platform .row dd { margin: 0; font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; }
@@ -216,7 +220,7 @@
 
 <div class="wrap reswrap" id="tab-resources" style="display:none">
   <div class="reslist">
-      <div class="panel">
+      <div class="panel" id="doc-sectional">
         <h2>IGLU Breezway Sectional Details</h2>
         <img class="resimg" src="assets/iglu-sectional-details.png" alt="IGLU Breezway Sectional Details">
         <p class="rescap">Elevation with horizontal and vertical cross-sections showing how the Overall, Box, Platform and Gallery sizes relate — head 24800, jamb 24810, sill 24820 and window-frame 24060 sections all labelled. Not to scale.</p>
@@ -264,6 +268,11 @@
     document.getElementById('tab-config').style.display = (t === 'config') ? '' : 'none';
     document.getElementById('tab-resources').style.display = (t === 'resources') ? '' : 'none';
   }
+  window.igluShowSectional = function () {
+    show('resources');
+    var el = document.getElementById('doc-sectional');
+    if (el) { el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+  };
   for (var i = 0; i < btns.length; i++) {
     (function (b) { b.onclick = function () { show(b.getAttribute('data-tab')); }; })(btns[i]);
   }
@@ -1024,8 +1033,9 @@ function renderBom(bom, opening, thermal) {
   }
   html += '</div>';
 
-  html += '<div class="platform"><div class="ttl">Platform size (opening)</div>'
-    + '<div class="row"><dt>Platform (W × H)</dt><dd>' + fmt(opening.platformWidth) + ' × ' + fmt(opening.platformHeight) + ' mm</dd></div></div>';
+  html += '<div class="platform"><div class="ttl">Platform size</div>'
+    + '<div class="row"><dt>Platform (W × H)</dt><dd>' + fmt(opening.platformWidth) + ' × ' + fmt(opening.platformHeight) + ' mm</dd></div>'
+    + '<button type="button" class="calclink" onclick="igluShowSectional()">How is this calculated? — see IGLU Breezway Sectional Details →</button></div>';
 
   if (thermal) {
   html += '<div class="thermal"><div class="ttl">Thermal performance</div>';
