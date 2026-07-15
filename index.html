@@ -336,6 +336,10 @@ var JAMB_FACE_MM       = HEAD_WIDTH_ADD_MM / 2; // 25.5 — per-jamb face for bo
 var BOX_HEIGHT_PER_BLADE_MM = 140; // mm of box height per blade
 var BOX_HEIGHT_BASE_MM      = 119; // box-height base allowance
 var BOX_WIDTH_EXTRA_MM  = 74;  // additional box-width allowance
+// Platform (structural opening) = box less an edge reveal: 18 each jamb (36 wide),
+// 20 + 18 at head & sill (76 high).
+var PLATFORM_WIDTH_DEDUCT_MM  = 18 * 2;        // 36
+var PLATFORM_HEIGHT_DEDUCT_MM = (20 + 18) * 2; // 76
 // Mullions (multi-gallery). Each gallery end finishes 58.5mm from the mullion
 // centre (incl. weatherstrip), so every internal joint consumes 117mm regardless
 // of mullion profile. Outer edges unchanged (62.5mm gallery→frame each side).
@@ -459,6 +463,9 @@ function computeOpening(config) {
   var widthSum = panels.reduce(function (s, p) { return s + p.bladeWidth; }, 0);
   var boxWidth = widthSum + (N - 1) * MULLION_GAP_MM + OUTER_BOX_EXTRA_MM;
   var boxHeight = BOX_HEIGHT_PER_BLADE_MM * tallestBlades + BOX_HEIGHT_BASE_MM;
+  // Platform (structural opening): box less the edge reveal (36 wide, 76 high).
+  var platformWidth = boxWidth - PLATFORM_WIDTH_DEDUCT_MM;
+  var platformHeight = boxHeight - PLATFORM_HEIGHT_DEDUCT_MM;
 
   // Spans: box→mullion 1, mullion i→i+1, …, mullion N−1→box (only when N ≥ 2).
   var spans = [];
@@ -472,7 +479,7 @@ function computeOpening(config) {
       spans.push({ label: label, mm: left + panels[i].bladeWidth + right });
     }
   }
-  return { boxWidth: boxWidth, boxHeight: boxHeight, spans: spans };
+  return { boxWidth: boxWidth, boxHeight: boxHeight, platformWidth: platformWidth, platformHeight: platformHeight, spans: spans };
 }
 
 // Thermal — pure, mirrors computeOpening(). Per panel: exact workbook U/R for that
@@ -534,7 +541,7 @@ function tint(hex, alpha) {
   return "rgba(" + parseInt(hex.substr(1, 2), 16) + "," + parseInt(hex.substr(3, 2), 16)
     + "," + parseInt(hex.substr(5, 2), 16) + "," + alpha + ")";
 }
-var SVG_MAX_W = 560, SVG_MAX_H = 440, MARGIN_L = 140, MARGIN_T = 104, MARGIN_R = 28, MARGIN_B = 44;
+var SVG_MAX_W = 560, SVG_MAX_H = 440, MARGIN_L = 140, MARGIN_T = 104, MARGIN_R = 28, MARGIN_B = 72;
 function fmt(v) { return String(Math.round(v * 10) / 10); }
 
 function buildDiagram(config) {
@@ -704,6 +711,19 @@ function buildDiagram(config) {
     line({ x1:x - 4, y1:fB, x2:x + 4, y2:fB, stroke:FRAME_FILL, strokeWidth:1 });
     var my = (fT + fB) / 2;
     text({ x:x - 4, y:my, text:"frame " + fmt(opening.boxHeight + FRAME_SECTION_MM) + "mm", fontSize:11, fill:FRAME_FILL, textAnchor:"middle", transform:"rotate(-90 " + (x - 4) + " " + my + ")" });
+  })();
+
+  // Platform (structural opening) dimension (bottom): ticked line spanning the
+  // platform width, centred under the assembly, labelled W × H.
+  (function () {
+    var pw = opening.platformWidth * s;
+    var cx = ox + drawW / 2;
+    var y = oy + drawH + frameTh + 48; // below the per-panel blade-width dims
+    var L = cx - pw / 2, R = cx + pw / 2;
+    line({ x1:L, y1:y, x2:R, y2:y, stroke:LABEL_COLOR, strokeWidth:1 });
+    line({ x1:L, y1:y - 4, x2:L, y2:y + 4, stroke:LABEL_COLOR, strokeWidth:1 });
+    line({ x1:R, y1:y - 4, x2:R, y2:y + 4, stroke:LABEL_COLOR, strokeWidth:1 });
+    text({ x:cx, y:y + 15, text:"platform " + fmt(opening.platformWidth) + " × " + fmt(opening.platformHeight) + "mm", fontSize:11, fill:LABEL_COLOR, textAnchor:"middle" });
   })();
 
   return { width: ox + drawW + frameTh + MARGIN_R, height: oy + drawH + frameTh + MARGIN_B, items: items };
@@ -903,7 +923,8 @@ function renderBom(bom, opening, thermal) {
   var html = '<div class="panel flow"><h2>Bill of Materials</h2>';
 
   html += '<div class="boxsize"><div class="ttl">Window size (box)</div>'
-    + '<div class="row"><dt>Box (W × H)</dt><dd>' + fmt(opening.boxWidth) + ' × ' + fmt(opening.boxHeight) + ' mm</dd></div>';
+    + '<div class="row"><dt>Box (W × H)</dt><dd>' + fmt(opening.boxWidth) + ' × ' + fmt(opening.boxHeight) + ' mm</dd></div>'
+    + '<div class="row"><dt>Platform (W × H)</dt><dd>' + fmt(opening.platformWidth) + ' × ' + fmt(opening.platformHeight) + ' mm</dd></div>';
   if (opening.spans && opening.spans.length > 0) {
     html += '<div style="margin-top:8px;border-top:1px solid #dbeafe;padding-top:6px">'
       + '<div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:#db2777;margin-bottom:3px">Mullion spacing (to centres)</div>';
@@ -1069,6 +1090,7 @@ function exportCsv() {
   rows.push("Window Size (Box)");
   rows.push("Metric,Width (mm),Height (mm)");
   rows.push("Box," + opening.boxWidth + "," + opening.boxHeight);
+  rows.push("Platform," + opening.platformWidth + "," + opening.platformHeight);
   rows.push("");
   if (thermal) {
     rows.push("Thermal Performance" + (thermal.multi ? " (combined = total heat loss / total area)" : ""));
