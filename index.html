@@ -672,8 +672,8 @@ function buildDiagram(config) {
   // its flanking jambs, and the blades span the full width to touch those jambs.
   function mullLeftOf(j)  { return panelLeftMm[j] + widths[j] + (MULLION_GAP_MM - MULLION_SECTION_MM) / 2; }
   function mullRightOf(j) { return mullLeftOf(j) + MULLION_SECTION_MM; }
-  function innerLOf(i) { return (i === 0)     ? JAMB_DRAW_MM            : mullRightOf(i - 1) + JAMB_DRAW_MM; }
-  function innerROf(i) { return (i === N - 1) ? totalWmm - JAMB_DRAW_MM : mullLeftOf(i) - JAMB_DRAW_MM; }
+  function innerLOf(i) { return (i === 0)     ? JAMB_DRAW_MM            : mullRightOf(i - 1); }
+  function innerROf(i) { return (i === N - 1) ? totalWmm - JAMB_DRAW_MM : mullLeftOf(i); }
 
   for (var i = 0; i < N; i++) {
     var innerLX = ox + innerLOf(i) * s, innerRX = ox + innerROf(i) * s;
@@ -724,15 +724,11 @@ function buildDiagram(config) {
   rect({ x:ox,                 y:headTopY, width:jambW, height:(HEAD_SECTION_MM + heights[0]) * s, fill:JAMB_FILL });
   rect({ x:ox + drawW - jambW, y:headTopY, width:jambW, height:(HEAD_SECTION_MM + heights[N - 1]) * s, fill:JAMB_FILL });
 
-  // Internal joints: a 19mm jamb (orange) butts each face of the centred mullion so the
-  // mullion touches the jambs; the to-scale gap falls between each jamb and its gallery.
+  // Internal joints: draw the centred mullion (24300) only. The 24810 jamb adapters
+  // that sit against each mullion face are omitted from the elevation (still in the BOM).
   for (var m = 0; m < N - 1; m++) {
     var gapLeftMm  = panelLeftMm[m] + widths[m];
     var mullLeftMm = gapLeftMm + (MULLION_GAP_MM - MULLION_SECTION_MM) / 2;
-    var mullRightMm = mullLeftMm + MULLION_SECTION_MM;
-    // jambs butting the mullion faces, 19mm, to scale
-    rect({ x:ox + (mullLeftMm - JAMB_DRAW_MM) * s, y:headTopY, width:jambW, height:(HEAD_SECTION_MM + heights[m]) * s, fill:JAMB_FILL });
-    rect({ x:ox + mullRightMm * s,                 y:headTopY, width:jambW, height:(HEAD_SECTION_MM + heights[m + 1]) * s, fill:JAMB_FILL });
     // mullion — full interior height, meets the green frame top & bottom
     var mullX = ox + mullLeftMm * s, mullW = MULLION_SECTION_MM * s;
     rect({ x:mullX, y:oy, width:mullW, height:drawH, fill:MULLION_FILL });
