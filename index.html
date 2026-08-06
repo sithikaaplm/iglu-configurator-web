@@ -152,6 +152,17 @@
                          white-space: nowrap; font-variant-numeric: tabular-nums; }
   .thermal .calc .crow.total { border-top: 1px solid #d1fae5; margin-top: 3px; padding-top: 3px; font-weight: 600; }
   .thermal .formula { margin-top: 5px; }
+  .windzone { margin-bottom: 16px; border: 1px solid #bae6fd; background: #f0f9ffaa; border-radius: 10px; padding: 12px; }
+  .windzone .ttl { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: #0369a1; margin-bottom: 6px; }
+  .windzone .row { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+  .windzone .row dt { font-size: 13px; color: var(--muted); }
+  .windzone .row dd { margin: 0; font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .toggle button:disabled { opacity: .35; cursor: not-allowed; }
+  .wztable { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 12px; }
+  .wztable th, .wztable td { border: 1px solid #dbeafe; padding: 6px 8px; text-align: center; }
+  .wztable th { background: #eff6ff; font-size: 11px; text-transform: uppercase; letter-spacing: .03em; color: #1d4ed8; }
+  .wztable td.rowlbl { text-align: left; font-weight: 600; }
+  .wztable .press { font-size: 10.5px; color: var(--muted); font-weight: 400; }
 
   /* Tables */
   .sect { margin: 14px 0 4px; padding: 5px 10px; border-radius: 5px; background: #eff6ff;
@@ -210,7 +221,7 @@
     .thermal .calcbox summary { list-style: none; } /* hide the ▶ marker when forced open */
     /* Keep tinted backgrounds on paper (cut-list extrusion bars, spec cards,
        section pills) even when the browser's "background graphics" is off. */
-    .seg.cut, .seg.off, .sect, .boxsize, .platform, .thermal, .thermal .calc, .pricing, .hpill {
+    .seg.cut, .seg.off, .sect, .boxsize, .platform, .thermal, .thermal .calc, .pricing, .windzone, .hpill {
       -webkit-print-color-adjust: exact; print-color-adjust: exact;
     }
   }
@@ -237,6 +248,11 @@
 
 <div class="wrap reswrap" id="tab-resources" style="display:none">
   <div class="reslist">
+      <div class="panel" id="doc-windzones">
+        <h2>Wind Zone Limits — Altair® IGLU® Louvre</h2>
+        <div id="wztable-slot"></div>
+        <p class="rescap">Maximum blade span and blade count per NZS 3604 wind zone, from the Breezway Altair® IGLU® Louvre wind-zone table. The configurator limits blade width and blade count to the selected zone automatically.</p>
+      </div>
       <div class="panel" id="doc-sectional">
         <h2>IGLU Breezway Sectional Details</h2>
         <img class="resimg" src="assets/iglu-sectional-details.png" alt="IGLU Breezway Sectional Details">
@@ -1061,10 +1077,82 @@ function nestExtrusions(rows) {
   return groups;
 }
 
+/* ---------- Wind zones — Altair IGLU Louvre limits (Breezway table) ---------- */
+/* A blade width qualifies under the first rule whose maxSpanMm covers it;
+   no rule -> that width is not permitted in the zone. */
+var WIND_ZONES = [
+  { key:"medium",    name:"Medium",     ulsPa:960,  slsPa:680,  waterPassPa:204,
+    rules:[{ maxSpanMm:800, maxBlades:21 }, { maxSpanMm:1127, maxBlades:15 }] },
+  { key:"high",      name:"High",       ulsPa:1360, slsPa:970,  waterPassPa:291,
+    rules:[{ maxSpanMm:800, maxBlades:18 }] },
+  { key:"veryHigh",  name:"Very High",  ulsPa:1760, slsPa:1250, waterPassPa:375,
+    rules:[{ maxSpanMm:500, maxBlades:11 }] },
+  { key:"extraHigh", name:"Extra High", ulsPa:2130, slsPa:1515, waterPassPa:455,
+    rules:[{ maxSpanMm:500, maxBlades:11 }] }
+];
+var WIND_ZONE_MAP = {};
+WIND_ZONES.forEach(function (z) { WIND_ZONE_MAP[z.key] = z; });
+var WZ_ALL_WIDTHS = [300, 500, 800, 1127];
+
+function maxBladesFor(zoneKey, width) {
+  var rules = WIND_ZONE_MAP[zoneKey].rules;
+  for (var i = 0; i < rules.length; i++) if (width <= rules[i].maxSpanMm) return rules[i].maxBlades;
+  return null;
+}
+function largestAllowedWidth(zoneKey) {
+  var widest = WZ_ALL_WIDTHS[0];
+  for (var i = 0; i < WZ_ALL_WIDTHS.length; i++) {
+    if (maxBladesFor(zoneKey, WZ_ALL_WIDTHS[i]) !== null) widest = WZ_ALL_WIDTHS[i];
+  }
+  return widest;
+}
+function bladeCountCap(zoneKey, widths) {
+  var cap = null;
+  for (var i = 0; i < widths.length; i++) {
+    var c = maxBladesFor(zoneKey, widths[i]);
+    if (c !== null && (cap === null || c < cap)) cap = c;
+  }
+  return cap !== null ? cap : WIND_ZONE_MAP[zoneKey].rules[0].maxBlades;
+}
+/* Mutates the global config so it is valid for its wind zone. */
+function clampConfigToZone() {
+  var zone = config.windZone;
+  var fallback = largestAllowedWidth(zone);
+  if (maxBladesFor(zone, config.bladeWidth) === null) config.bladeWidth = fallback;
+  config.panels = config.panels.map(function (p) {
+    return maxBladesFor(zone, p.bladeWidth) === null
+      ? { id:p.id, bladeCount:p.bladeCount, bladeWidth:fallback } : p;
+  });
+  var cap = bladeCountCap(zone, config.panels.map(function (p) { return p.bladeWidth; }));
+  config.panels = config.panels.map(function (p) {
+    return p.bladeCount > cap ? { id:p.id, bladeCount:cap, bladeWidth:p.bladeWidth } : p;
+  });
+}
+function renderWindZoneReference() {
+  var slot = document.getElementById("wztable-slot");
+  if (!slot) return;
+  var html = '<table class="wztable"><thead><tr><th>Blade</th>';
+  WIND_ZONES.forEach(function (z) {
+    html += '<th>' + h(z.name) + ' Wind Zone<div class="press">' + z.ulsPa + 'Pa ULS · ' + z.slsPa + 'Pa SLS · ' + z.waterPassPa + 'Pa Water Pass</div></th>';
+  });
+  html += '</tr></thead><tbody>';
+  // One row per catalogue blade width: max blade count in each zone, or — if not permitted.
+  WZ_ALL_WIDTHS.forEach(function (w) {
+    html += '<tr><td class="rowlbl">' + w + 'mm IGLU glass blade (toughened)</td>';
+    WIND_ZONES.forEach(function (z) {
+      var cap = maxBladesFor(z.key, w);
+      html += '<td>' + (cap === null ? "—" : "max " + cap + " blades") + '</td>';
+    });
+    html += '</tr>';
+  });
+  html += '</tbody></table>';
+  slot.innerHTML = html;
+}
+
 /* ---------- State ---------- */
 var STORAGE_KEY = "iglu-standalone-config-v1";
 var panelSeq = 1;
-var config = { bladeWidth:500, controlType:"standard", grade:"std", finish:DEFAULT_FINISH, panels:[{ id:"default", bladeCount:8, bladeWidth:500 }] };
+var config = { bladeWidth:500, controlType:"standard", grade:"std", finish:DEFAULT_FINISH, windZone:"medium", panels:[{ id:"default", bladeCount:8, bladeWidth:500 }] };
 
 function save() { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(config)); } catch (e) {} }
 function load() {
@@ -1076,6 +1164,8 @@ function load() {
       c.grade = (c.grade === "offstd") ? "offstd" : "std";
       // Drop an unknown saved finish rather than pricing off a missing rate.
       c.finish = EXTRUSION_STICK_PRICES["24801"][c.finish] != null ? c.finish : DEFAULT_FINISH;
+      // Migrate pre-wind-zone saved configs; drop unknown zones.
+      c.windZone = WIND_ZONE_MAP[c.windZone] ? c.windZone : "medium";
       // Migrate pre-mullion saved configs: backfill per-panel blade width.
       // Drop malformed entries (unknown blade count/width) so a stale or corrupt
       // saved config can never crash the render.
@@ -1091,19 +1181,23 @@ function load() {
         if (m) panelSeq = Math.max(panelSeq, Number(m[1]));
       });
       config = c;
+      clampConfigToZone();
     }
   } catch (e) {}
 }
 
 /* ---------- Mutations ---------- */
 // Blade width control sets every panel at once (and the default for new panels).
+function setWindZone(z) { config.windZone = z; clampConfigToZone(); onChange(); }
 function setBlade(w) {
   config.bladeWidth = w;
   config.panels = config.panels.map(function (p) { return { id:p.id, bladeCount:p.bladeCount, bladeWidth:w }; });
+  clampConfigToZone();
   onChange();
 }
 function setPanelWidth(id, w) {
   config.panels = config.panels.map(function (p) { return p.id === id ? { id:p.id, bladeCount:p.bladeCount, bladeWidth:w } : p; });
+  clampConfigToZone();
   onChange();
 }
 function setControl(c) { config.controlType = c; onChange(); }
@@ -1114,6 +1208,7 @@ function addPanel() {
   if (config.panels.length >= MAX_PANELS) return;
   var shared = (config.panels[0] && config.panels[0].bladeCount) || 8;
   config.panels.push({ id:"p" + (++panelSeq), bladeCount:shared, bladeWidth:config.bladeWidth });
+  clampConfigToZone();
   onChange();
 }
 function removePanel(id) {
@@ -1136,10 +1231,18 @@ function renderForm() {
 
   var html = '<div class="panel no-print"><h2>Configuration</h2>';
 
+  html += '<div class="field"><div class="fld">Wind zone</div><div class="toggle">';
+  for (var zi = 0; zi < WIND_ZONES.length; zi++) {
+    var z = WIND_ZONES[zi];
+    html += '<button class="' + (config.windZone === z.key ? "active" : "") + '" onclick="setWindZone(\'' + z.key + '\')">' + h(z.name) + '</button>';
+  }
+  html += '</div><div style="margin-top:4px;font-size:10px;color:var(--muted2)">Limits blade width and blade count for the zone.</div></div>';
+
   html += '<div class="field"><div class="fld">Blade width (sets all panels)</div><div class="toggle">';
   for (var i = 0; i < widths.length; i++) {
     var w = widths[i];
-    html += '<button class="' + (config.bladeWidth === w ? "active" : "") + '" onclick="setBlade(' + w + ')">' + w + 'mm</button>';
+    var wOk = maxBladesFor(config.windZone, w) !== null;
+    html += '<button class="' + (config.bladeWidth === w ? "active" : "") + '"' + (wOk ? "" : " disabled") + ' onclick="setBlade(' + w + ')">' + w + 'mm</button>';
   }
   html += '</div><div style="margin-top:4px;font-size:10px;color:var(--muted2)">Override per panel below.</div></div>';
 
@@ -1161,11 +1264,14 @@ function renderForm() {
   html += '</select><div style="margin-top:4px;font-size:10px;color:var(--muted2)">Sets the $/m for 24800 / 24810 / 24820.</div></div>';
 
   html += '<div class="field"><div class="fld">Blade count (sets all panels)</div><select class="auto" onchange="setCount(Number(this.value))">';
+  var wzCap = bladeCountCap(config.windZone, config.panels.map(function (p) { return p.bladeWidth; }));
   for (var c = 0; c < VALID_BLADE_COUNTS.length; c++) {
     var n = VALID_BLADE_COUNTS[c];
+    if (n > wzCap) continue;
     html += '<option value="' + n + '"' + (n === shared ? " selected" : "") + '>' + n + ' blades</option>';
   }
-  html += '</select><span class="hpill">' + bh.height + 'mm</span></div>';
+  html += '</select><span class="hpill">' + bh.height + 'mm</span>'
+    + '<div style="margin-top:4px;font-size:10px;color:var(--muted2)">Max ' + wzCap + ' blades in this wind zone.</div></div>';
 
   html += '<div class="panels"><div class="ph"><h3>Panels (' + config.panels.length + ')</h3>';
   if (config.panels.length < MAX_PANELS) html += '<button class="addbtn" onclick="addPanel()">+ Add panel</button>';
@@ -1180,7 +1286,7 @@ function renderForm() {
       + '<select class="auto" onchange="setPanelWidth(\'' + p.id + '\', Number(this.value))">';
     for (var wi = 0; wi < widths.length; wi++) {
       var pw = widths[wi];
-      html += '<option value="' + pw + '"' + (p.bladeWidth === pw ? " selected" : "") + '>' + pw + 'mm</option>';
+      html += '<option value="' + pw + '"' + (p.bladeWidth === pw ? " selected" : "") + (maxBladesFor(config.windZone, pw) === null ? " disabled" : "") + '>' + pw + 'mm</option>';
     }
     html += '</select></label></div>';
   }
@@ -1272,6 +1378,15 @@ function renderBom(bom, opening, thermal, pricing) {
   }
   html += '<div class="formula">' + h(thermal.formula) + '</div></div>';
   }
+
+  var wz = WIND_ZONE_MAP[config.windZone];
+  var wzCap = bladeCountCap(config.windZone, config.panels.map(function (p) { return p.bladeWidth; }));
+  html += '<div class="windzone"><div class="ttl">Wind zone</div>'
+    + '<div class="row"><dt>Zone</dt><dd>' + h(wz.name) + '</dd></div>'
+    + '<div class="row"><dt>ULS</dt><dd>' + wz.ulsPa + ' Pa</dd></div>'
+    + '<div class="row"><dt>SLS</dt><dd>' + wz.slsPa + ' Pa</dd></div>'
+    + '<div class="row"><dt>Water pass</dt><dd>' + wz.waterPassPa + ' Pa</dd></div>'
+    + '<div class="row"><dt>Max blade count</dt><dd>' + wzCap + '</dd></div></div>';
 
   if (pricing) html += renderPricing(pricing);
 
@@ -1424,6 +1539,16 @@ function exportCsv() {
     thermal.calc.forEach(function (c) { rows.push(q(c.label) + "," + q(c.val) + ","); });
     rows.push("");
   }
+  var wz = WIND_ZONE_MAP[config.windZone];
+  var wzCap = bladeCountCap(config.windZone, config.panels.map(function (p) { return p.bladeWidth; }));
+  rows.push("Wind Zone");
+  rows.push("Metric,Value,Unit");
+  rows.push("Zone," + wz.name + ",");
+  rows.push("ULS," + wz.ulsPa + ",Pa");
+  rows.push("SLS," + wz.slsPa + ",Pa");
+  rows.push("Water Pass," + wz.waterPassPa + ",Pa");
+  rows.push("Max blades (zone limit)," + wzCap + ",");
+  rows.push("");
   rows.push("Pricing - APL sell (NZD ex GST) - extrusion finish: " + ascii(pricing.finishName));
   rows.push("Section,Part No,Description,Qty,Unit,Unit Price,Line Total");
   [["Gallery sets", pricing.gallerySets], ["Glass blades", pricing.blades],
@@ -1490,6 +1615,7 @@ function __afterPrint() {
 try {
   load();
   render();
+  renderWindZoneReference();
   if (window.addEventListener) {
     window.addEventListener("beforeprint", __beforePrint);
     window.addEventListener("afterprint", __afterPrint);
