@@ -1228,9 +1228,7 @@ function renderPricing(pricing) {
     + priceRows("Weatherstrip", pricing.weatherstrip)
     + (pricing.extrusions.length ? priceRows("Extrusions — whole stock lengths", pricing.extrusions) : "")
     + '<tr class="total"><td colspan="3">Total</td><td class="num mono">' + fmtNzd(pricing.total) + '</td></tr>'
-    + '</tbody></table>'
-    + '<div class="note">Excludes ' + h(pricing.unpriced.join(", ").toLowerCase())
-    + ' — no prices in the APL price list.</div></div>';
+    + '</tbody></table></div>';
 }
 
 function renderBom(bom, opening, thermal, pricing) {
@@ -1437,7 +1435,6 @@ function exportCsv() {
     });
   });
   rows.push(q("Total") + ",,,,,," + pricing.total.toFixed(2));
-  rows.push(q("Excludes: " + pricing.unpriced.join(", ") + " - no prices in the APL price list") + ",,,,,,");
   rows.push("");
 
   if (opening.spans && opening.spans.length > 0) {
