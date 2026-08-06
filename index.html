@@ -117,6 +117,23 @@
   .platform .row dt { font-size: 13px; color: var(--muted); }
   .platform .row dd { margin: 0; font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; }
 
+  /* Pricing block — amber sibling of .boxsize */
+  .pricing { margin-bottom: 16px; border: 1px solid #fde68a; background: #fffbebaa; border-radius: 10px; padding: 12px; }
+  .pricing .ttl { display: flex; justify-content: space-between; align-items: baseline;
+    font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em;
+    color: #b45309; margin-bottom: 6px; }
+  .pricing .ttl .gst { font-size: 10px; font-weight: 400; text-transform: none; letter-spacing: 0; color: var(--muted2); }
+  .pricing table { width: 100%; border-collapse: collapse; }
+  .pricing td { padding: 3px 0; font-size: 12px; vertical-align: top; }
+  .pricing td.num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .pricing tr.line td { border-bottom: 1px solid #fef3c7; }
+  .pricing td.grp { padding-top: 8px; font-size: 10px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: .04em; color: #b45309; }
+  .pricing .rate { margin-left: 4px; font-size: 10px; color: var(--muted2); }
+  .pricing tr.total td { border-top: 2px solid #fcd34d; padding-top: 6px; font-size: 13px; font-weight: 600; }
+  .pricing tr.total td.num { font-size: 14px; }
+  .pricing .note { margin-top: 6px; font-size: 10px; color: var(--muted2); }
+
   /* Thermal performance block — emerald sibling of .boxsize */
   .thermal { margin-bottom: 16px; border: 1px solid #a7f3d0; background: #ecfdf5aa; border-radius: 10px; padding: 12px; }
   .thermal .ttl { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: var(--emerald); margin-bottom: 6px; }
@@ -187,13 +204,13 @@
        strands the header alone on page 1. Keep the small building blocks intact. */
     .panel { break-inside: avoid; }
     .panel.flow { break-inside: auto; }
-    tr, .boxsize, .platform, .thermal, .optgroup { break-inside: avoid; }
+    tr, .boxsize, .platform, .thermal, .pricing, .optgroup { break-inside: avoid; }
     .sect { break-after: avoid; }
     .diagbox { overflow: visible; }  /* no printed scrollbar track */
     .thermal .calcbox summary { list-style: none; } /* hide the ▶ marker when forced open */
     /* Keep tinted backgrounds on paper (cut-list extrusion bars, spec cards,
        section pills) even when the browser's "background graphics" is off. */
-    .seg.cut, .seg.off, .sect, .boxsize, .platform, .thermal, .thermal .calc, .hpill {
+    .seg.cut, .seg.off, .sect, .boxsize, .platform, .thermal, .thermal .calc, .pricing, .hpill {
       -webkit-print-color-adjust: exact; print-color-adjust: exact;
     }
   }
@@ -413,6 +430,164 @@ var GALLERY_DESCRIPTION = {};
     }
   }
 })();
+
+/* ---------- Pricing (mirrors src/lib/iglu/pricing.ts) ----------
+   APL sell prices, NZD ex GST. Source: IGLU_APLPriceList.xlsx "APL_PartNo".
+   Sell figures only — cost columns and the cost→sell markup are deliberately
+   not carried here, because this file is published.
+   Priced from this list: gallery sets, glass blades, weatherstrip. Extrusions
+   24800/24810/24820 are priced from the ERP instead (see EXTRUSION_FINISH_PRICES
+   below); window frame 24060, mullion 24300 and packer inserts stay unpriced.  */
+// [bladeCount, standard-STD, standard-OFF STD, keylock-STD, keylock-OFF STD]
+var RAW_GALLERY_PRICE = [
+  [2,   82.53, 104.30, 153.23, 174.97], [3,  106.81, 129.92, 180.22, 200.62],
+  [4,  140.60, 160.97, 211.30, 234.42], [5,  168.94, 196.13, 242.35, 265.47],
+  [6,  195.93, 225.85, 268.00, 296.55], [7,  224.27, 252.83, 296.34, 326.26],
+  [8,  252.64, 290.70, 324.70, 361.38], [9,  285.05, 321.76, 354.41, 393.82],
+  [10, 317.52, 352.86, 389.55, 423.56], [11, 345.86, 387.98, 417.90, 461.41],
+  [12, 374.21, 419.06, 444.91, 491.12], [13, 403.89, 452.86, 473.24, 523.56],
+  [14, 430.91, 479.85, 504.29, 554.62], [15, 463.33, 516.36, 532.67, 587.05],
+  [16, 491.68, 544.71, 562.39, 615.40], [17, 514.60, 573.06, 589.36, 647.82],
+  [18, 559.24, 623.15, 629.94, 695.20], [19, 606.65, 674.62, 677.33, 745.30],
+  [20, 654.02, 728.80, 727.44, 800.84], [21, 706.83, 789.78, 778.90, 860.48]
+];
+
+var GALLERY_PRICE = {};
+(function buildGalleryPrice(){
+  for (var r = 0; r < RAW_GALLERY_PRICE.length; r++) {
+    var row = RAW_GALLERY_PRICE[r], n = row[0];
+    GALLERY_PRICE[n+":std:standard"]    = row[1];
+    GALLERY_PRICE[n+":offstd:standard"] = row[2];
+    GALLERY_PRICE[n+":std:keylock"]     = row[3];
+    GALLERY_PRICE[n+":offstd:keylock"]  = row[4];
+  }
+})();
+
+var BLADE_PRICE = { 300:149.00, 500:161.35, 800:202.73, 1127:247.07 };
+
+var WEATHERSTRIP_PRICE = [
+  { partNo:"190 001 163", description:"IGLU Thermally Improved Head Weatherstrip insert (incl. seal)", perMetre:25.69 },
+  { partNo:"190 001 164", description:"IGLU Thermally Improved Sill Weatherstrip insert (incl. seal)", perMetre:27.37 }
+];
+
+var UNPRICED_SECTIONS = ["Window frame", "Mullions", "Packer inserts"];
+
+/* Extrusions — whole 5m stock lengths from the APLNZ ERP (aplnz_App), read from
+   itemprice_mst.unit_price1 for the stock-length SKU <item>.500.<finish>
+   (".500" = 5.00m), effective 2026-06-03.
+   NOT emdaItemFinishPrice.price × 5 — that $/m rate does not multiply up to the
+   stick price (24801 Mill is 21.760584/m there, but a 5m stick sells for 90.34).
+   24800/24810/24820 are base profile codes; the ERP stocks them with a cavity
+   suffix, so we price the 1C (single-colour) items:
+     24800 head → 24801, 24810 jamb → 24811, 24820 sill → 24821
+   (2.5m sticks — ".250" — also exist; the cut list assumes 5m stock.)          */
+var EXTRUSION_ERP_ITEM = { "24800":"24801", "24810":"24811", "24820":"24821" };
+
+var FINISHES = [
+  { code:"01", name:"Mill" },
+  { code:"21", name:"Bronze 12 Micron Anodised" },
+  { code:"22", name:"25 Micron Anodised (non-natural)" },
+  { code:"26", name:"Natural 12 Micron Anodised" },
+  { code:"28", name:"Natural 25 Micron Anodised" },
+  { code:"41", name:"Popular PC" },
+  { code:"43", name:"Intermediate PC" },
+  { code:"44", name:"Performance PC" },
+  { code:"45", name:"Decorative" },
+  { code:"46", name:"Premium PC" }
+];
+var DEFAULT_FINISH = "01";
+
+/* Price of one 5m stock length, by ERP item code then finish code (NZD ex GST). */
+var EXTRUSION_STICK_PRICES = {
+  "24801": { "01":90.34, "21":111.49, "22":127.54, "26":107.79, "28":123.69, "41":102.04, "43":106.09, "44":113.89, "45":162.49, "46":131.39 },
+  "24811": { "01":76.34, "21":94.74375, "22":105.44375, "26":92.29375, "28":102.89375, "41":84.09, "43":86.79, "44":91.99, "45":124.34, "46":103.64 },
+  "24821": { "01":96.94, "21":119.44, "22":136.59, "26":115.49, "28":132.49, "41":109.39, "43":113.69, "44":122.04, "45":173.79, "46":140.64 }
+};
+
+function extrusionStickPrice(partNo, finish) {
+  var item = EXTRUSION_ERP_ITEM[partNo];
+  var byFinish = item ? EXTRUSION_STICK_PRICES[item] : null;
+  if (!byFinish) return null;
+  var p = byFinish[finish];
+  return p != null ? p : (byFinish[DEFAULT_FINISH] != null ? byFinish[DEFAULT_FINISH] : null);
+}
+
+function finishName(code) {
+  for (var i = 0; i < FINISHES.length; i++) if (FINISHES[i].code === code) return FINISHES[i].name;
+  return code;
+}
+
+function round2(v) { return Math.round(v * 100) / 100; }
+
+function computePricing(config, bom) {
+  var panels = config.panels, grade = config.grade, controlType = config.controlType;
+  var finish = config.finish || DEFAULT_FINISH;
+
+  var gallerySets = panels.map(function (panel, i) {
+    var key = panel.bladeCount + ":" + grade + ":" + controlType;
+    var unitPrice = GALLERY_PRICE[key] || 0;
+    return {
+      partNo: GALLERY_PART_NO[key] || "—",
+      description: "Gallery set — Panel " + (i + 1) + " · " + panel.bladeCount + " blades",
+      qty: 1, unit: "each", unitPrice: unitPrice, total: unitPrice
+    };
+  });
+
+  // Blades — grouped by width so the line matches the Glass Blades table.
+  var widths = [], qtyByWidth = {};
+  for (var i = 0; i < panels.length; i++) {
+    var w = panels[i].bladeWidth;
+    if (qtyByWidth[w] == null) { qtyByWidth[w] = 0; widths.push(w); }
+    qtyByWidth[w] += panels[i].bladeCount;
+  }
+  var blades = widths.map(function (w) {
+    var unitPrice = BLADE_PRICE[w];
+    return {
+      partNo: w + "-IGLU", description: w + "mm IGLU 152mm Stronghold Blade",
+      qty: qtyByWidth[w], unit: "each", unitPrice: unitPrice,
+      total: round2(unitPrice * qtyByWidth[w])
+    };
+  });
+
+  // Weatherstrip — one head and one sill run across every gallery.
+  var widthSum = 0;
+  for (var j = 0; j < panels.length; j++) widthSum += panels[j].bladeWidth;
+  var metres = round2(widthSum / 1000);
+  var weatherstrip = WEATHERSTRIP_PRICE.map(function (ws) {
+    return {
+      partNo: ws.partNo, description: ws.description, qty: metres, unit: "m",
+      unitPrice: ws.perMetre, total: round2(ws.perMetre * metres)
+    };
+  });
+
+  // Extrusions — whole 5m stock lengths, counted by the same cut-list nesting.
+  var stockMetres = STOCK_LENGTH / 1000;
+  var extrusions = [];
+  var groups = nestExtrusions(bom.headExtrusions.concat(bom.sillExtrusions).concat(bom.jambExtrusions));
+  for (var gi = 0; gi < groups.length; gi++) {
+    var grp = groups[gi], stickPrice = extrusionStickPrice(grp.code, finish);
+    if (!grp.sticksNeeded || stickPrice == null) continue;
+    var unitPrice = round2(stickPrice);
+    extrusions.push({
+      partNo: grp.code, description: grp.name + " — " + stockMetres + "m stock length",
+      qty: grp.sticksNeeded, unit: "length", unitPrice: unitPrice,
+      total: round2(unitPrice * grp.sticksNeeded)
+    });
+  }
+
+  var all = gallerySets.concat(blades).concat(weatherstrip).concat(extrusions), total = 0;
+  for (var k = 0; k < all.length; k++) total += all[k].total;
+
+  return { gallerySets:gallerySets, blades:blades, weatherstrip:weatherstrip,
+           extrusions:extrusions, finishCode:finish, finishName:finishName(finish),
+           total:round2(total), unpriced:UNPRICED_SECTIONS };
+}
+
+function fmtNzd(v) {
+  var neg = v < 0, s = Math.abs(v).toFixed(2), parts = s.split(".");
+  parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  return (neg ? "-$" : "$") + parts.join(".");
+}
 
 // Extrusion cut-length additions (verified from Size, Cutting & Fixing Details.pdf)
 var HEAD_WIDTH_ADD_MM  = 51;   // head cut  = bladeWidth + 51
@@ -889,7 +1064,7 @@ function nestExtrusions(rows) {
 /* ---------- State ---------- */
 var STORAGE_KEY = "iglu-standalone-config-v1";
 var panelSeq = 1;
-var config = { bladeWidth:500, controlType:"standard", grade:"std", panels:[{ id:"default", bladeCount:8, bladeWidth:500 }] };
+var config = { bladeWidth:500, controlType:"standard", grade:"std", finish:DEFAULT_FINISH, panels:[{ id:"default", bladeCount:8, bladeWidth:500 }] };
 
 function save() { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(config)); } catch (e) {} }
 function load() {
@@ -898,7 +1073,9 @@ function load() {
     if (!raw) return;
     var c = JSON.parse(raw);
     if (c && c.bladeWidth && c.panels && c.panels.length) {
-      c.grade = "std";
+      c.grade = (c.grade === "offstd") ? "offstd" : "std";
+      // Drop an unknown saved finish rather than pricing off a missing rate.
+      c.finish = EXTRUSION_STICK_PRICES["24801"][c.finish] != null ? c.finish : DEFAULT_FINISH;
       // Migrate pre-mullion saved configs: backfill per-panel blade width.
       // Drop malformed entries (unknown blade count/width) so a stale or corrupt
       // saved config can never crash the render.
@@ -930,6 +1107,8 @@ function setPanelWidth(id, w) {
   onChange();
 }
 function setControl(c) { config.controlType = c; onChange(); }
+function setGrade(g) { config.grade = g; onChange(); }
+function setFinish(f) { config.finish = f; onChange(); }
 function setCount(n) { config.panels = config.panels.map(function (p) { return { id:p.id, bladeCount:n, bladeWidth:p.bladeWidth }; }); onChange(); }
 function addPanel() {
   if (config.panels.length >= MAX_PANELS) return;
@@ -968,6 +1147,18 @@ function renderForm() {
     + '<button class="' + (config.controlType === "standard" ? "active" : "") + '" onclick="setControl(\'standard\')">Standard</button>'
     + '<button class="' + (config.controlType === "keylock" ? "active" : "") + '" onclick="setControl(\'keylock\')">Keylock</button>'
     + '</div></div>';
+
+  html += '<div class="field"><div class="fld">Grade</div><div class="toggle">'
+    + '<button class="' + (config.grade === "std" ? "active" : "") + '" onclick="setGrade(\'std\')">Standard</button>'
+    + '<button class="' + (config.grade === "offstd" ? "active" : "") + '" onclick="setGrade(\'offstd\')">Off standard</button>'
+    + '</div><div style="margin-top:4px;font-size:10px;color:var(--muted2)">Off standard = cut-down gallery height; changes part no. and price.</div></div>';
+
+  html += '<div class="field"><div class="fld">Extrusion finish</div><select onchange="setFinish(this.value)">';
+  for (var fi = 0; fi < FINISHES.length; fi++) {
+    var fo = FINISHES[fi];
+    html += '<option value="' + fo.code + '"' + (config.finish === fo.code ? " selected" : "") + '>' + h(fo.name) + '</option>';
+  }
+  html += '</select><div style="margin-top:4px;font-size:10px;color:var(--muted2)">Sets the $/m for 24800 / 24810 / 24820.</div></div>';
 
   html += '<div class="field"><div class="fld">Blade count (sets all panels)</div><select class="auto" onchange="setCount(Number(this.value))">';
   for (var c = 0; c < VALID_BLADE_COUNTS.length; c++) {
@@ -1014,7 +1205,35 @@ function bomRows(rows, withFormula) {
   return out;
 }
 
-function renderBom(bom, opening, thermal) {
+function priceRows(label, rows) {
+  var out = '<tr><td class="grp" colspan="4">' + h(label) + '</td></tr>';
+  for (var i = 0; i < rows.length; i++) {
+    var r = rows[i];
+    var qty = r.unit === "m" ? (r.qty.toFixed(2) + " m")
+            : r.unit === "length" ? (r.qty + " × 5m") : r.qty;
+    out += '<tr class="line"><td class="mono">' + h(r.partNo) + '</td>'
+      + '<td>' + h(r.description) + '</td>'
+      + '<td class="num">' + qty + '<span class="rate">@ ' + fmtNzd(r.unitPrice) + '</span></td>'
+      + '<td class="num mono">' + fmtNzd(r.total) + '</td></tr>';
+  }
+  return out;
+}
+
+function renderPricing(pricing) {
+  return '<div class="pricing"><div class="ttl"><span>Pricing — APL sell</span>'
+    + '<span class="gst">' + h(pricing.finishName) + ' · NZD, ex GST</span></div>'
+    + '<table><tbody>'
+    + priceRows("Gallery sets", pricing.gallerySets)
+    + priceRows("Glass blades", pricing.blades)
+    + priceRows("Weatherstrip", pricing.weatherstrip)
+    + (pricing.extrusions.length ? priceRows("Extrusions — whole stock lengths", pricing.extrusions) : "")
+    + '<tr class="total"><td colspan="3">Total</td><td class="num mono">' + fmtNzd(pricing.total) + '</td></tr>'
+    + '</tbody></table>'
+    + '<div class="note">Excludes ' + h(pricing.unpriced.join(", ").toLowerCase())
+    + ' — no prices in the APL price list.</div></div>';
+}
+
+function renderBom(bom, opening, thermal, pricing) {
   var html = '<div class="panel flow"><h2>Bill of Materials</h2>';
 
   html += '<div class="boxsize"><div class="ttl">Window size (box)</div>'
@@ -1055,6 +1274,8 @@ function renderBom(bom, opening, thermal) {
   }
   html += '<div class="formula">' + h(thermal.formula) + '</div></div>';
   }
+
+  if (pricing) html += renderPricing(pricing);
 
   html += '<div class="sect">Gallery Sets</div>'
     + '<table><thead><tr><th>Part no.</th><th>Description</th><th class="num">Qty</th></tr></thead><tbody>'
@@ -1164,19 +1385,21 @@ function render() {
   var bom = computeBom(config);
   var opening = computeOpening(config);
   var thermal = computeThermal(config);
+  var pricing = computePricing(config, bom);
   var view = buildDiagram(config);
   var rows = bom.headExtrusions.concat(bom.sillExtrusions).concat(bom.jambExtrusions).concat(bom.frameExtrusions).concat(bom.mullionExtrusions);
 
   document.getElementById("left").innerHTML = renderForm();
   document.getElementById("right").innerHTML =
-    renderBom(bom, opening, thermal) + renderDiagramPanel(view) + renderOptimiser(rows);
+    renderBom(bom, opening, thermal, pricing) + renderDiagramPanel(view) + renderOptimiser(rows);
 }
 
 function onChange() { save(); render(); }
 
 /* ---------- CSV export (mirrors src/components/iglu/Configurator.tsx buildCsv) ---------- */
 function exportCsv() {
-  var bom = computeBom(config), opening = computeOpening(config), thermal = computeThermal(config);
+  var bom = computeBom(config), opening = computeOpening(config), thermal = computeThermal(config),
+      pricing = computePricing(config, bom);
   // Excel (Windows) reads BOM-less CSV as ANSI; ASCII-fold the symbols the thermal
   // labels use (×, ², Ψ, ÷, −, —) so cells stay readable in any consumer.
   function ascii(s) {
@@ -1203,6 +1426,20 @@ function exportCsv() {
     thermal.calc.forEach(function (c) { rows.push(q(c.label) + "," + q(c.val) + ","); });
     rows.push("");
   }
+  rows.push("Pricing - APL sell (NZD ex GST) - extrusion finish: " + ascii(pricing.finishName));
+  rows.push("Section,Part No,Description,Qty,Unit,Unit Price,Line Total");
+  [["Gallery sets", pricing.gallerySets], ["Glass blades", pricing.blades],
+   ["Weatherstrip", pricing.weatherstrip],
+   ["Extrusions (whole stock lengths)", pricing.extrusions]].forEach(function (sec) {
+    sec[1].forEach(function (l) {
+      rows.push(q(sec[0]) + "," + q(l.partNo) + "," + q(l.description) + "," + l.qty + ","
+        + l.unit + "," + l.unitPrice.toFixed(2) + "," + l.total.toFixed(2));
+    });
+  });
+  rows.push(q("Total") + ",,,,,," + pricing.total.toFixed(2));
+  rows.push(q("Excludes: " + pricing.unpriced.join(", ") + " - no prices in the APL price list") + ",,,,,,");
+  rows.push("");
+
   if (opening.spans && opening.spans.length > 0) {
     rows.push("Mullion Spacing (centres)"); rows.push("Span,Width (mm)");
     opening.spans.forEach(function (sp) { rows.push(q(sp.label) + "," + sp.mm); });
