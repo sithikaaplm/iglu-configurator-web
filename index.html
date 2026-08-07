@@ -59,6 +59,13 @@
   .reslist { display: flex; flex-direction: column; gap: 16px; }
   .resimg { display: block; width: 100%; height: auto; border: 1px solid var(--line); border-radius: 6px; }
   .rescap { margin: 12px 0 0; font-size: 13px; color: var(--muted); line-height: 1.5; }
+  /* Standard vs Off-Standard summary card */
+  .stdgrid { display: grid; gap: 16px; grid-template-columns: 1fr 1fr; }
+  @media (max-width: 760px) { .stdgrid { grid-template-columns: 1fr; } }
+  .stdcol { border: 1px solid var(--line); background: #f8fafcaa; border-radius: 8px; padding: 14px; }
+  .stdcol h3 { margin: 0 0 8px; font-size: 13px; font-weight: 600; color: var(--ink); }
+  .stdcol ul { margin: 0; padding-left: 20px; }
+  .stdcol li { font-size: 13px; color: #334155; line-height: 1.5; margin-bottom: 6px; }
   .panel { min-width: 0; background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 18px; }
   .panel h2 {
     margin: 0 0 12px; font-size: 13px; font-weight: 600; text-transform: uppercase;
@@ -140,17 +147,6 @@
   .thermal .row { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
   .thermal .row dt { font-size: 13px; color: var(--muted); }
   .thermal .row dd { margin: 0; font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; }
-  .thermal .row.per dt, .thermal .row.per dd { font-size: 12px; font-weight: 400; color: #475569; }
-  .thermal .divider { border-top: 1px solid #a7f3d0; margin: 7px 0; }
-  .thermal .calcbox { margin-top: 7px; }
-  .thermal .calcbox summary { cursor: pointer; font-size: 11px; font-weight: 600; color: var(--emerald);
-                              -webkit-user-select: none; user-select: none; }
-  .thermal .calc { margin-top: 5px; padding: 5px 8px; border: 1px solid #d1fae5; border-radius: 5px;
-                   background: #f0fdf4; font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-                   font-size: 10.5px; color: #334155; overflow-x: auto; }
-  .thermal .calc .crow { display: flex; justify-content: space-between; gap: 14px; padding: 1px 0;
-                         white-space: nowrap; font-variant-numeric: tabular-nums; }
-  .thermal .calc .crow.total { border-top: 1px solid #d1fae5; margin-top: 3px; padding-top: 3px; font-weight: 600; }
   .thermal .formula { margin-top: 5px; }
   .windzone { margin-bottom: 16px; border: 1px solid #bae6fd; background: #f0f9ffaa; border-radius: 10px; padding: 12px; }
   .windzone .ttl { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: #0369a1; margin-bottom: 6px; }
@@ -218,10 +214,9 @@
     tr, .boxsize, .platform, .thermal, .pricing, .optgroup { break-inside: avoid; }
     .sect { break-after: avoid; }
     .diagbox { overflow: visible; }  /* no printed scrollbar track */
-    .thermal .calcbox summary { list-style: none; } /* hide the ▶ marker when forced open */
     /* Keep tinted backgrounds on paper (cut-list extrusion bars, spec cards,
        section pills) even when the browser's "background graphics" is off. */
-    .seg.cut, .seg.off, .sect, .boxsize, .platform, .thermal, .thermal .calc, .pricing, .windzone, .hpill {
+    .seg.cut, .seg.off, .sect, .boxsize, .platform, .thermal, .pricing, .windzone, .hpill {
       -webkit-print-color-adjust: exact; print-color-adjust: exact;
     }
   }
@@ -288,6 +283,30 @@
         <img class="resimg" src="assets/iglu-breezway-sections-seals.png" alt="Breezway Sections &amp; Seals">
         <p class="rescap">The Breezway component profiles: IGLU Head and Sill weatherstrips, Gallery, Clip, the coextruded PVC seal (rigid &amp; flexible) and the standard coextrusion weatherseal.</p>
       </div>
+      <div class="panel" id="doc-standards">
+        <h2>Standard vs Off-Standard</h2>
+        <div class="stdgrid">
+          <div class="stdcol">
+            <h3>&ldquo;Standard&rdquo; Inclusions</h3>
+            <ul>
+              <li>Standard Louvre gallery heights.</li>
+              <li>Left hand control (viewed from inside).</li>
+              <li>Black handles and clips for all finishes, except White or Gull Grey on select colours &mdash; see &ldquo;Standard New Zealand Colours&rdquo;.</li>
+              <li>Clips to suit 6mm thick blades.</li>
+            </ul>
+          </div>
+          <div class="stdcol">
+            <h3>&ldquo;Off-Standard&rdquo; Features Available</h3>
+            <ul>
+              <li>Right hand control (viewed from inside).</li>
+              <li>Colour matched handles and clips &mdash; see the &ldquo;New Zealand Colours&rdquo; table.</li>
+              <li>Low Profile Handle, Ring Handle, A2 or A6 Remote Handle.</li>
+              <li>80mm or 100mm restricted opening.</li>
+            </ul>
+          </div>
+        </div>
+        <p class="rescap">Off-standard also covers cut-down gallery heights &mdash; this changes the part number and the price.</p>
+      </div>
   </div>
 </div>
 
@@ -304,6 +323,11 @@
   window.igluShowSectional = function () {
     show('resources');
     var el = document.getElementById('doc-sectional');
+    if (el) { el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+  };
+  window.igluShowStandards = function () {
+    show('resources');
+    var el = document.getElementById('doc-standards');
     if (el) { el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
   };
   for (var i = 0; i < btns.length; i++) {
@@ -1254,7 +1278,7 @@ function renderForm() {
   html += '<div class="field"><div class="fld">Grade</div><div class="toggle">'
     + '<button class="' + (config.grade === "std" ? "active" : "") + '" onclick="setGrade(\'std\')">Standard</button>'
     + '<button class="' + (config.grade === "offstd" ? "active" : "") + '" onclick="setGrade(\'offstd\')">Off standard</button>'
-    + '</div><div style="margin-top:4px;font-size:10px;color:var(--muted2)">Off standard = cut-down gallery height; changes part no. and price.</div></div>';
+    + '</div><button type="button" class="calclink" style="font-size:10px;margin-top:4px" onclick="igluShowStandards()">What\'s standard vs off-standard? &rarr;</button></div>';
 
   html += '<div class="field"><div class="fld">Extrusion finish</div><select onchange="setFinish(this.value)">';
   for (var fi = 0; fi < FINISHES.length; fi++) {
@@ -1356,27 +1380,14 @@ function renderBom(bom, opening, thermal, pricing) {
     + '<div class="row"><dt>Platform (W × H)</dt><dd>' + fmt(opening.platformWidth) + ' × ' + fmt(opening.platformHeight) + ' mm</dd></div>'
     + '<button type="button" class="calclink" onclick="igluShowSectional()">How is this calculated? — see IGLU Breezway Sectional Details →</button></div>';
 
-  if (thermal) {
-  html += '<div class="thermal"><div class="ttl">Thermal performance</div>';
-  if (thermal.multi) {
-    for (var ti = 0; ti < thermal.perPanel.length; ti++) {
-      var tp = thermal.perPanel[ti];
-      html += '<div class="row per"><dt>Panel ' + (ti + 1) + ' · ' + tp.width + ' mm · ' + tp.count + ' blades</dt>'
-        + '<dd>U ' + tp.u.toFixed(2) + ' · R ' + tp.r.toFixed(2) + '</dd></div>';
-    }
-    html += '<div class="divider"></div>';
-  }
-  html += '<div class="row"><dt>' + (thermal.multi ? 'Combined U-value' : 'U-value') + '</dt><dd>' + thermal.u.toFixed(2) + ' W/m²K</dd></div>'
-    + '<div class="row"><dt>' + (thermal.multi ? 'Combined R-value' : 'R-value') + '</dt><dd>' + thermal.r.toFixed(2) + ' m²K/W</dd></div>';
-  if (thermal.calc) {
-    html += '<details class="calcbox"><summary>Full calculation</summary><div class="calc">';
-    for (var ci = 0; ci < thermal.calc.length; ci++) {
-      var cl = thermal.calc[ci];
-      html += '<div class="crow' + (cl.total ? ' total' : '') + '"><span>' + h(cl.label) + '</span><span>' + h(cl.val) + '</span></div>';
-    }
-    html += '</div></details>';
-  }
-  html += '<div class="formula">' + h(thermal.formula) + '</div></div>';
+  /* Single-panel only: the combined multi-panel figure isn't a value we can
+     stand behind, so the whole block is hidden as soon as there's more than one
+     panel. The step-by-step "Full calculation" is internal and never shown. */
+  if (thermal && !thermal.multi) {
+    html += '<div class="thermal"><div class="ttl">Thermal performance</div>'
+      + '<div class="row"><dt>U-value</dt><dd>' + thermal.u.toFixed(2) + ' W/m²K</dd></div>'
+      + '<div class="row"><dt>R-value</dt><dd>' + thermal.r.toFixed(2) + ' m²K/W</dd></div>'
+      + '<div class="formula">' + h(thermal.formula) + '</div></div>';
   }
 
   var wz = WIND_ZONE_MAP[config.windZone];
@@ -1526,17 +1537,12 @@ function exportCsv() {
   rows.push("Box," + opening.boxWidth + "," + opening.boxHeight);
   rows.push("Platform," + opening.platformWidth + "," + opening.platformHeight);
   rows.push("");
-  if (thermal) {
-    rows.push("Thermal Performance" + (thermal.multi ? " (combined = total heat loss / total area)" : ""));
+  /* Mirrors renderBom: single-panel only, headline U/R only (no working). */
+  if (thermal && !thermal.multi) {
+    rows.push("Thermal Performance");
     rows.push("Metric,Value,Unit");
     rows.push("U-value," + thermal.u.toFixed(2) + ",W/m2.K");
     rows.push("R-value," + thermal.r.toFixed(2) + ",m2.K/W");
-    if (thermal.multi) {
-      thermal.perPanel.forEach(function (tp, ti) {
-        rows.push(q("Panel " + (ti + 1) + " (" + tp.width + "mm x " + tp.count + " blades)") + ",U " + tp.u.toFixed(2) + " / R " + tp.r.toFixed(2) + ",");
-      });
-    }
-    thermal.calc.forEach(function (c) { rows.push(q(c.label) + "," + q(c.val) + ","); });
     rows.push("");
   }
   var wz = WIND_ZONE_MAP[config.windZone];
@@ -1597,29 +1603,11 @@ function exportCsv() {
   URL.revokeObjectURL(url);
 }
 
-/* ---------- Print: show the thermal Full calculation on paper ---------- */
-var __printOpened = [];
-function __beforePrint() {
-  __printOpened = [];
-  var ds = document.querySelectorAll(".thermal details");
-  for (var i = 0; i < ds.length; i++) {
-    if (!ds[i].open) { ds[i].open = true; __printOpened.push(ds[i]); }
-  }
-}
-function __afterPrint() {
-  for (var i = 0; i < __printOpened.length; i++) __printOpened[i].open = false;
-  __printOpened = [];
-}
-
 /* ---------- Wire up ---------- */
 try {
   load();
   render();
   renderWindZoneReference();
-  if (window.addEventListener) {
-    window.addEventListener("beforeprint", __beforePrint);
-    window.addEventListener("afterprint", __afterPrint);
-  }
   window.__ranOK = true;
 } catch (e) {
   __showErr((e && e.message) ? e.message : String(e));
