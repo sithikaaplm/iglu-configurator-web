@@ -55,7 +55,7 @@
   .tabbtn:hover { color: #334155; border-bottom-color: var(--line2); }
   .tabbtn.active { color: var(--blue); border-bottom-color: var(--blue); }
   /* Dimension & assembly information cards */
-  .reswrap { max-width: 960px; margin: 0 auto; }
+  .reswrap { max-width: none; margin: 0; }  /* drawings read better full-bleed */
   .reslist { display: flex; flex-direction: column; gap: 16px; }
   .resimg { display: block; width: 100%; height: auto; border: 1px solid var(--line); border-radius: 6px; }
   .rescap { margin: 12px 0 0; font-size: 13px; color: var(--muted); line-height: 1.5; }
@@ -79,12 +79,13 @@
     cursor: pointer; border: 1px solid var(--line2); background: #fff; color: #334155;
   }
   .toggle button.active { background: var(--blue); border-color: var(--blue); color: #fff; }
-  select {
+  select, input[type="text"] {
     width: 100%; margin-top: 0; padding: 7px 9px; font: inherit; font-size: 13px;
     border: 1px solid var(--line2); border-radius: 7px; background: #fff;
   }
+  input[type="text"] { box-sizing: border-box; }
   select.auto { width: auto; }
-  select:focus { outline: 2px solid var(--blue); outline-offset: -1px; border-color: var(--blue); }
+  select:focus, input[type="text"]:focus { outline: 2px solid var(--blue); outline-offset: -1px; border-color: var(--blue); }
   .hpill { display: inline-block; margin-left: 10px; padding: 4px 8px; border-radius: 6px;
            background: #eff6ff; color: var(--blue7); font-size: 12px; font-weight: 600; }
   .hpill .ws { margin-left: 4px; font-weight: 400; color: var(--blue); }
@@ -620,6 +621,7 @@ function computePricing(config, bom) {
 
   return { gallerySets:gallerySets, blades:blades, weatherstrip:weatherstrip,
            extrusions:extrusions, finishCode:finish, finishName:finishName(finish),
+           colour:(config.colour || "").trim(),
            total:round2(total), unpriced:UNPRICED_SECTIONS };
 }
 
@@ -1176,7 +1178,7 @@ function renderWindZoneReference() {
 /* ---------- State ---------- */
 var STORAGE_KEY = "iglu-standalone-config-v1";
 var panelSeq = 1;
-var config = { bladeWidth:500, controlType:"standard", grade:"std", finish:DEFAULT_FINISH, windZone:"medium", panels:[{ id:"default", bladeCount:8, bladeWidth:500 }] };
+var config = { bladeWidth:500, controlType:"standard", grade:"std", finish:DEFAULT_FINISH, colour:"", windZone:"medium", panels:[{ id:"default", bladeCount:8, bladeWidth:500 }] };
 
 function save() { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(config)); } catch (e) {} }
 function load() {
@@ -1188,6 +1190,8 @@ function load() {
       c.grade = (c.grade === "offstd") ? "offstd" : "std";
       // Drop an unknown saved finish rather than pricing off a missing rate.
       c.finish = EXTRUSION_STICK_PRICES["24801"][c.finish] != null ? c.finish : DEFAULT_FINISH;
+      // Free-text colour — absent on pre-colour saved configs.
+      c.colour = typeof c.colour === "string" ? c.colour : "";
       // Migrate pre-wind-zone saved configs; drop unknown zones.
       c.windZone = WIND_ZONE_MAP[c.windZone] ? c.windZone : "medium";
       // Migrate pre-mullion saved configs: backfill per-panel blade width.
@@ -1287,6 +1291,11 @@ function renderForm() {
   }
   html += '</select><div style="margin-top:4px;font-size:10px;color:var(--muted2)">Sets the $/m for 24800 / 24810 / 24820.</div></div>';
 
+  html += '<div class="field"><div class="fld">Colour</div>'
+    + '<input type="text" value="' + h(config.colour || "") + '" oninput="setColour(this.value)"'
+    + ' placeholder="e.g. ARCTIC WHITE MATT, PROTEXTURE FLAXPOD">'
+    + '<div style="margin-top:4px;font-size:10px;color:var(--muted2)">Informational - shown on the BOM and CSV, does not change pricing.</div></div>';
+
   html += '<div class="field"><div class="fld">Blade count (sets all panels)</div><select class="auto" onchange="setCount(Number(this.value))">';
   var wzCap = bladeCountCap(config.windZone, config.panels.map(function (p) { return p.bladeWidth; }));
   for (var c = 0; c < VALID_BLADE_COUNTS.length; c++) {
@@ -1351,7 +1360,7 @@ function priceRows(label, rows) {
 
 function renderPricing(pricing) {
   return '<div class="pricing"><div class="ttl"><span>Pricing - APL sell</span>'
-    + '<span class="gst">' + h(pricing.finishName) + ' · NZD, ex GST</span></div>'
+    + '<span class="gst">' + h(pricing.finishName) + (pricing.colour ? ' · ' + h(pricing.colour) : '') + ' · NZD, ex GST</span></div>'
     + '<table><tbody>'
     + priceRows("Gallery sets", pricing.gallerySets)
     + priceRows("Glass blades", pricing.blades)
@@ -1505,7 +1514,7 @@ function renderDiagramPanel(view) {
     + '</div></div>';
 }
 
-function render() {
+function renderRight() {
   var bom = computeBom(config);
   var opening = computeOpening(config);
   var thermal = computeThermal(config);
@@ -1513,12 +1522,20 @@ function render() {
   var view = buildDiagram(config);
   var rows = bom.headExtrusions.concat(bom.sillExtrusions).concat(bom.jambExtrusions).concat(bom.frameExtrusions).concat(bom.mullionExtrusions);
 
-  document.getElementById("left").innerHTML = renderForm();
   document.getElementById("right").innerHTML =
     renderBom(bom, opening, thermal, pricing) + renderDiagramPanel(view) + renderOptimiser(rows);
 }
 
+function render() {
+  document.getElementById("left").innerHTML = renderForm();
+  renderRight();
+}
+
 function onChange() { save(); render(); }
+
+/* Colour is free text: redrawing the form on every keystroke would destroy the
+   input and lose the caret, so only the right-hand column is re-rendered. */
+function setColour(v) { config.colour = v; save(); renderRight(); }
 
 /* ---------- CSV export (mirrors src/components/iglu/Configurator.tsx buildCsv) ---------- */
 function exportCsv() {
@@ -1555,7 +1572,8 @@ function exportCsv() {
   rows.push("Water Pass," + wz.waterPassPa + ",Pa");
   rows.push("Max blades (zone limit)," + wzCap + ",");
   rows.push("");
-  rows.push("Pricing - APL sell (NZD ex GST) - extrusion finish: " + ascii(pricing.finishName));
+  rows.push("Pricing - APL sell (NZD ex GST) - extrusion finish: " + ascii(pricing.finishName)
+    + (pricing.colour ? " - colour: " + ascii(pricing.colour) : ""));
   rows.push("Section,Part No,Description,Qty,Unit,Unit Price,Line Total");
   [["Gallery sets", pricing.gallerySets], ["Glass blades", pricing.blades],
    ["Weatherstrip", pricing.weatherstrip],
