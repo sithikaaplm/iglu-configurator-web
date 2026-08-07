@@ -18,7 +18,7 @@
       host.insertBefore(b, host.firstChild);
     }
     b.textContent = "⚠ Could not build the lists/diagram on this device: " + msg
-      + " — try opening this file in Safari or Chrome (Share → Open in Browser).";
+      + " - try opening this file in Safari or Chrome (Share → Open in Browser).";
     b.style.display = "block";
   }
   window.onerror = function (m, src, line) { __showErr(m + (line ? " (line " + line + ")" : "")); return false; };
@@ -244,19 +244,19 @@
 <div class="wrap reswrap" id="tab-resources" style="display:none">
   <div class="reslist">
       <div class="panel" id="doc-windzones">
-        <h2>Wind Zone Limits — Altair® IGLU® Louvre</h2>
+        <h2>Wind Zone Limits - Altair® IGLU® Louvre</h2>
         <div id="wztable-slot"></div>
         <p class="rescap">Maximum blade span and blade count per NZS 3604 wind zone, from the Breezway Altair® IGLU® Louvre wind-zone table. The configurator limits blade width and blade count to the selected zone automatically.</p>
       </div>
       <div class="panel" id="doc-sectional">
         <h2>IGLU Breezway Sectional Details</h2>
         <img class="resimg" src="assets/iglu-sectional-details.png" alt="IGLU Breezway Sectional Details">
-        <p class="rescap">Elevation with horizontal and vertical cross-sections showing how the Overall, Box, Platform and Gallery sizes relate — head 24800, jamb 24810, sill 24820 and window-frame 24060 sections all labelled. Not to scale.</p>
+        <p class="rescap">Elevation with horizontal and vertical cross-sections showing how the Overall, Box, Platform and Gallery sizes relate - head 24800, jamb 24810, sill 24820 and window-frame 24060 sections all labelled. Not to scale.</p>
       </div>
       <div class="panel">
         <h2>Machining &amp; Drainage Details</h2>
         <img class="resimg" src="assets/iglu-machining-drainage.png" alt="Machining &amp; Drainage Details">
-        <p class="rescap">Jamb leg removal (20mm, by hacksaw or pliers — no CNC), head drainage holes (6⌀ ×2 at either end), sill weep slots (20 × 3.5 at either end), the wet-seal run along the sill and up the jambs, and jamb fixings (self-drilling 25mm pan screws at 450mm centres).</p>
+        <p class="rescap">Jamb leg removal (20mm, by hacksaw or pliers - no CNC), head drainage holes (6⌀ ×2 at either end), sill weep slots (20 × 3.5 at either end), the wet-seal run along the sill and up the jambs, and jamb fixings (self-drilling 25mm pan screws at 450mm centres).</p>
       </div>
       <div class="panel">
         <h2>Assembly Installation Details 1 to 2</h2>
@@ -271,7 +271,7 @@
       <div class="panel">
         <h2>Assembly Installation Details 5 to 6</h2>
         <img class="resimg" src="assets/iglu-assembly-5-6.png" alt="Assembly Installation Details 5 to 6">
-        <p class="rescap">Steps 5–6: red weather-bar profiles clipped into the sill and head inserts, then the IGLU blades inserted — completing the gallery set inside the frame.</p>
+        <p class="rescap">Steps 5–6: red weather-bar profiles clipped into the sill and head inserts, then the IGLU blades inserted - completing the gallery set inside the frame.</p>
       </div>
       <div class="panel">
         <h2>APL Sections</h2>
@@ -417,16 +417,16 @@ function thermalCalcLines(d) {
   var lines = [
     { label: "Overall size (W × H)", val: d.overallW + " × " + d.overallH + " mm" },
     { label: "Area A = W × H", val: d.area.toFixed(3) + " m²" },
-    { label: "HL jambs — " + (d.jambCount || 2) + " × " + jambH + " × " + TH.FH_JAMB + "mm × Uf " + TH.UF_JAMB, val: d.hlJambs.toFixed(3) + " W/K" }
+    { label: "HL jambs - " + (d.jambCount || 2) + " × " + jambH + " × " + TH.FH_JAMB + "mm × Uf " + TH.UF_JAMB, val: d.hlJambs.toFixed(3) + " W/K" }
   ];
   if (d.mullionCount) {
-    lines.push({ label: "HL mullions — " + d.mullionCount + " × " + jambH + " × " + TH.FH_TRANSOM + "mm × Uf " + TH.UF_TRANSOM + " (transom section)", val: d.hlMullions.toFixed(3) + " W/K" });
+    lines.push({ label: "HL mullions - " + d.mullionCount + " × " + jambH + " × " + TH.FH_TRANSOM + "mm × Uf " + TH.UF_TRANSOM + " (transom section)", val: d.hlMullions.toFixed(3) + " W/K" });
   }
   lines.push(
-    { label: "HL head — " + d.overallW + " × " + TH.FH_HEAD + "mm × Uf " + TH.UF_HEAD, val: d.hlHead.toFixed(3) + " W/K" },
-    { label: "HL sill — " + d.overallW + " × " + TH.FH_SILL + "mm × Uf " + TH.UF_SILL, val: d.hlSill.toFixed(3) + " W/K" },
-    { label: "HL glass — " + (d.hlGlass / TH.U_GLASS).toFixed(3) + " m² × UG " + TH.U_GLASS, val: d.hlGlass.toFixed(3) + " W/K" },
-    { label: "HL blade transoms — (blades−1) × glass width × " + TH.FH_TRANSOM + "mm × Uf " + TH.UF_TRANSOM, val: d.hlTransoms.toFixed(3) + " W/K" },
+    { label: "HL head - " + d.overallW + " × " + TH.FH_HEAD + "mm × Uf " + TH.UF_HEAD, val: d.hlHead.toFixed(3) + " W/K" },
+    { label: "HL sill - " + d.overallW + " × " + TH.FH_SILL + "mm × Uf " + TH.UF_SILL, val: d.hlSill.toFixed(3) + " W/K" },
+    { label: "HL glass - " + (d.hlGlass / TH.U_GLASS).toFixed(3) + " m² × UG " + TH.U_GLASS, val: d.hlGlass.toFixed(3) + " W/K" },
+    { label: "HL blade transoms - (blades−1) × glass width × " + TH.FH_TRANSOM + "mm × Uf " + TH.UF_TRANSOM, val: d.hlTransoms.toFixed(3) + " W/K" },
     { label: "HL ΨG edge transitions (sill/head/jamb/transom)", val: d.hlPsi.toFixed(3) + " W/K" },
     { label: "Total heat loss HL", val: d.heatLoss.toFixed(3) + " W/K", total: true },
     { label: "U = HL ÷ A", val: d.u.toFixed(2) + " W/m²K", total: true },
@@ -567,8 +567,8 @@ function computePricing(config, bom) {
     var key = panel.bladeCount + ":" + grade + ":" + controlType;
     var unitPrice = GALLERY_PRICE[key] || 0;
     return {
-      partNo: GALLERY_PART_NO[key] || "—",
-      description: "Gallery set — Panel " + (i + 1) + " · " + panel.bladeCount + " blades",
+      partNo: GALLERY_PART_NO[key] || "-",
+      description: "Gallery set - Panel " + (i + 1) + " · " + panel.bladeCount + " blades",
       qty: 1, unit: "each", unitPrice: unitPrice, total: unitPrice
     };
   });
@@ -609,7 +609,7 @@ function computePricing(config, bom) {
     if (!grp.sticksNeeded || stickPrice == null) continue;
     var unitPrice = round2(stickPrice);
     extrusions.push({
-      partNo: grp.code, description: grp.name + " — " + stockMetres + "m stock length",
+      partNo: grp.code, description: grp.name + " - " + stockMetres + "m stock length",
       qty: grp.sticksNeeded, unit: "length", unitPrice: unitPrice,
       total: round2(unitPrice * grp.sticksNeeded)
     });
@@ -701,12 +701,12 @@ function computeBom(config) {
   });
 
   var headExtrusions = panels.map(function (panel, i) {
-    return { partNo:"24800", description:"IGLU Head adapter — Panel " + (i+1), qty:1,
+    return { partNo:"24800", description:"IGLU Head adapter - Panel " + (i+1), qty:1,
              cutLength: panel.bladeWidth + HEAD_WIDTH_ADD_MM, deductionFlag:false,
              formula: panel.bladeWidth + "mm (blade width) + " + HEAD_WIDTH_ADD_MM + "mm = " + (panel.bladeWidth + HEAD_WIDTH_ADD_MM) + "mm" };
   });
   var sillExtrusions = panels.map(function (panel, i) {
-    return { partNo:"24820", description:"IGLU Sill adapter — Panel " + (i+1), qty:1,
+    return { partNo:"24820", description:"IGLU Sill adapter - Panel " + (i+1), qty:1,
              cutLength: panel.bladeWidth + SILL_WIDTH_ADD_MM, deductionFlag:false,
              formula: panel.bladeWidth + "mm (blade width) + " + SILL_WIDTH_ADD_MM + "mm = " + (panel.bladeWidth + SILL_WIDTH_ADD_MM) + "mm" };
   });
@@ -716,12 +716,12 @@ function computeBom(config) {
   var jambCutLength = jbBoxHeight - JAMB_BOX_DEDUCT_MM;
   var jambFormula = jbBoxHeight + "mm (box height) − " + JAMB_BOX_DEDUCT_MM + "mm = " + jambCutLength + "mm";
   var jambExtrusions = [
-    { partNo:"24810", description:"IGLU Jamb adapter — left outer",  qty:1, cutLength:jambCutLength, formula:jambFormula, deductionFlag:false },
-    { partNo:"24810", description:"IGLU Jamb adapter — right outer", qty:1, cutLength:jambCutLength, formula:jambFormula, deductionFlag:false }
+    { partNo:"24810", description:"IGLU Jamb adapter - left outer",  qty:1, cutLength:jambCutLength, formula:jambFormula, deductionFlag:false },
+    { partNo:"24810", description:"IGLU Jamb adapter - right outer", qty:1, cutLength:jambCutLength, formula:jambFormula, deductionFlag:false }
   ];
   // Mullion jamb adapters (24810): two per mullion — one against each adjacent gallery.
   for (var ji = 0; ji < N - 1; ji++) {
-    jambExtrusions.push({ partNo:"24810", description:"IGLU Jamb adapter — mullion (panels " + (ji+1) + "/" + (ji+2) + ")",
+    jambExtrusions.push({ partNo:"24810", description:"IGLU Jamb adapter - mullion (panels " + (ji+1) + "/" + (ji+2) + ")",
       qty:2, cutLength:jambCutLength, formula:jambFormula, deductionFlag:false });
   }
 
@@ -733,9 +733,9 @@ function computeBom(config) {
   var frameW = fbBoxWidth + FRAME_CUT_ADD_MM;
   var frameH = jbBoxHeight + FRAME_CUT_ADD_MM;
   var frameExtrusions = [
-    { partNo: FRAME_PART_NO, description: FRAME_DESCRIPTION + " — head/sill", qty:2, cutLength: frameW, deductionFlag:false,
+    { partNo: FRAME_PART_NO, description: FRAME_DESCRIPTION + " - head/sill", qty:2, cutLength: frameW, deductionFlag:false,
       formula: fbBoxWidth + "mm (box width) + " + FRAME_CUT_ADD_MM + "mm = " + frameW + "mm" },
-    { partNo: FRAME_PART_NO, description: FRAME_DESCRIPTION + " — jambs", qty:2, cutLength: frameH, deductionFlag:false,
+    { partNo: FRAME_PART_NO, description: FRAME_DESCRIPTION + " - jambs", qty:2, cutLength: frameH, deductionFlag:false,
       formula: jbBoxHeight + "mm (box height) + " + FRAME_CUT_ADD_MM + "mm = " + frameH + "mm" }
   ];
 
@@ -744,7 +744,7 @@ function computeBom(config) {
   var mullionExtrusions = [];
   for (var i = 0; i < N - 1; i++) {
     var taller = Math.max(BLADE_HEIGHTS[panels[i].bladeCount].height, BLADE_HEIGHTS[panels[i + 1].bladeCount].height);
-    mullionExtrusions.push({ partNo: MULLION_PART_NO, description: MULLION_DESCRIPTION + " — between panels " + (i+1) + "/" + (i+2), qty:1,
+    mullionExtrusions.push({ partNo: MULLION_PART_NO, description: MULLION_DESCRIPTION + " - between panels " + (i+1) + "/" + (i+2), qty:1,
       cutLength: taller + MULLION_HEIGHT_ADD_MM, deductionFlag:true,
       formula: taller + "mm (taller gallery) + " + MULLION_HEIGHT_ADD_MM + "mm = " + (taller + MULLION_HEIGHT_ADD_MM) + "mm" });
   }
@@ -1165,7 +1165,7 @@ function renderWindZoneReference() {
     html += '<tr><td class="rowlbl">' + w + 'mm IGLU glass blade (toughened)</td>';
     WIND_ZONES.forEach(function (z) {
       var cap = maxBladesFor(z.key, w);
-      html += '<td>' + (cap === null ? "—" : "max " + cap + " blades") + '</td>';
+      html += '<td>' + (cap === null ? "-" : "max " + cap + " blades") + '</td>';
     });
     html += '</tr>';
   });
@@ -1350,13 +1350,13 @@ function priceRows(label, rows) {
 }
 
 function renderPricing(pricing) {
-  return '<div class="pricing"><div class="ttl"><span>Pricing — APL sell</span>'
+  return '<div class="pricing"><div class="ttl"><span>Pricing - APL sell</span>'
     + '<span class="gst">' + h(pricing.finishName) + ' · NZD, ex GST</span></div>'
     + '<table><tbody>'
     + priceRows("Gallery sets", pricing.gallerySets)
     + priceRows("Glass blades", pricing.blades)
     + priceRows("Weatherstrip", pricing.weatherstrip)
-    + (pricing.extrusions.length ? priceRows("Extrusions — whole stock lengths", pricing.extrusions) : "")
+    + (pricing.extrusions.length ? priceRows("Extrusions - whole stock lengths", pricing.extrusions) : "")
     + '<tr class="total"><td colspan="3">Total</td><td class="num mono">' + fmtNzd(pricing.total) + '</td></tr>'
     + '</tbody></table></div>';
 }
@@ -1378,7 +1378,7 @@ function renderBom(bom, opening, thermal, pricing) {
 
   html += '<div class="platform"><div class="ttl">Platform size</div>'
     + '<div class="row"><dt>Platform (W × H)</dt><dd>' + fmt(opening.platformWidth) + ' × ' + fmt(opening.platformHeight) + ' mm</dd></div>'
-    + '<button type="button" class="calclink" onclick="igluShowSectional()">How is this calculated? — see IGLU Breezway Sectional Details →</button></div>';
+    + '<button type="button" class="calclink" onclick="igluShowSectional()">How is this calculated? - see IGLU Breezway Sectional Details →</button></div>';
 
   /* Single-panel only: the combined multi-panel figure isn't a value we can
      stand behind, so the whole block is hidden as soon as there's more than one
@@ -1432,7 +1432,7 @@ function renderBom(bom, opening, thermal, pricing) {
   }
 
   html += '<div class="breezeway"><div class="sect">Packer Inserts</div>'
-    + '<div class="note">Supplied by Breezeway — not included in this BOM.</div>'
+    + '<div class="note">Supplied by Breezeway - not included in this BOM.</div>'
     + '<table><thead><tr><th>Part no.</th><th>Description</th><th class="num">Qty</th></tr></thead><tbody>'
     + bomRows([bom.headPackers, bom.sillPackerE, bom.sillPackerI, bom.jambPackers], false)
     + '</tbody></table></div>';
@@ -1454,12 +1454,12 @@ function renderOptimiser(rows) {
     var col = EXTRUSION_COLOR[grp.code];
     var segStyle = col ? ';background:' + tint(col, 0.45) + ';color:#1e293b' : '';
     html += '<div class="optgroup"><div class="head">'
-      + '<h3>' + (col ? legendSwatch(col) : '') + h(grp.code) + ' <span>— ' + h(grp.name) + '</span></h3>'
+      + '<h3>' + (col ? legendSwatch(col) : '') + h(grp.code) + ' <span>- ' + h(grp.name) + '</span></h3>'
       + '<span class="sticks-needed">' + grp.sticksNeeded + ' × 5 m extrusion' + (grp.sticksNeeded === 1 ? "" : "s") + '</span></div>';
 
     for (var si = 0; si < grp.sticks.length; si++) {
       var stick = grp.sticks[si];
-      var trimCap = '<div class="seg trim" style="flex-grow:' + END_TRIM + ';flex-basis:0" title="end trim ' + END_TRIM + 'mm — saw waste"></div>';
+      var trimCap = '<div class="seg trim" style="flex-grow:' + END_TRIM + ';flex-basis:0" title="end trim ' + END_TRIM + 'mm - saw waste"></div>';
       html += '<div class="stick"><span class="lbl">' + (grp.sticks.length > 1 ? "#" + (si + 1) : "") + '</span><div class="bar">' + trimCap;
       for (var ci = 0; ci < stick.cuts.length; ci++) {
         var len = stick.cuts[ci];
@@ -1476,7 +1476,7 @@ function renderOptimiser(rows) {
       + '<span style="color:#e11d48">' + fmt(grp.sticksNeeded * 2 * END_TRIM) + 'mm end-trim</span></p>';
     if (grp.oversized.length > 0) {
       html += '<p class="optwarn">⚠ ' + grp.oversized.length + ' piece' + (grp.oversized.length === 1 ? "" : "s")
-        + ' longer than the usable 4.9 m length (' + grp.oversized.map(fmt).join(", ") + 'mm) — cannot be cut from one length.</p>';
+        + ' longer than the usable 4.9 m length (' + grp.oversized.map(fmt).join(", ") + 'mm) - cannot be cut from one length.</p>';
     }
     html += '</div>';
   }
@@ -1491,7 +1491,7 @@ function legendSwatch(color) {
 }
 
 function renderDiagramPanel(view) {
-  return '<div class="panel"><h2>Diagram — to scale</h2>'
+  return '<div class="panel"><h2>Diagram - to scale</h2>'
     + '<div class="diagcap">Front elevation</div>'
     + '<div class="diagbox">' + renderDiagram(view) + '</div>'
     + '<div class="legend">'
@@ -1589,7 +1589,7 @@ function exportCsv() {
     rows.push(""); rows.push("Mullions (24300)"); rows.push("Part No,Description,Qty,Cut Length (mm),Deduction Flag");
     bom.mullionExtrusions.forEach(function (r) { rows.push(q(r.partNo) + "," + q(r.description) + "," + r.qty + "," + r.cutLength + "," + (r.deductionFlag ? "VERIFY" : "")); });
   }
-  rows.push(""); rows.push("Packer Inserts (supplied by Breezeway — not included)"); rows.push("Part No,Description,Qty");
+  rows.push(""); rows.push("Packer Inserts (supplied by Breezeway - not included)"); rows.push("Part No,Description,Qty");
   [bom.headPackers, bom.sillPackerE, bom.sillPackerI, bom.jambPackers].forEach(function (r) {
     rows.push(q(r.partNo) + "," + q(r.description) + "," + r.qty);
   });
