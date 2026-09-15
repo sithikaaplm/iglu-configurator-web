@@ -50,6 +50,16 @@
   .grid { display: grid; gap: 20px; grid-template-columns: 300px 1fr; align-items: start; }
   @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
   .col { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+  /* Full-width section (diagram + optimised cut list) - breaks out of the narrow
+     .wrap to a wider container, centred on the viewport. The diagram and the cut
+     list are both wide drawings; squeezing them into the 1fr grid column wastes
+     most of the screen. Mirrors the Box Fin build. */
+  .wide { box-sizing: border-box; width: 100vw; max-width: 100vw;
+          margin-left: calc(50% - 50vw); margin-right: calc(50% - 50vw);
+          margin-bottom: 20px; padding: 0 24px;
+          display: flex; flex-direction: column; gap: 20px; }
+  .wide > .panel { width: 100%; max-width: 1600px; margin: 0 auto; }
+  @media (max-width: 640px) { .wide { padding: 0 14px; gap: 14px; } }
   /* Tab bar (mirrors the Box Fin "Dimension & assembly information" tab) */
   .tabs { display: flex; background: #fff; border-bottom: 1px solid var(--line); padding: 0 24px; }
   .tabbtn { appearance: none; background: none; border: none; border-bottom: 2px solid transparent;
@@ -217,6 +227,9 @@
     tr, .boxsize, .platform, .thermal, .pricing, .optgroup { break-inside: avoid; }
     .sect { break-after: avoid; }
     .diagbox { overflow: visible; }  /* no printed scrollbar track */
+    /* 100vw is the viewport, not the sheet - un-break the full-bleed strip so it
+       prints inside the page margins instead of running off the right edge. */
+    .wide { width: auto; max-width: none; margin-left: 0; margin-right: 0; padding: 0; }
     /* Keep tinted backgrounds on paper (cut-list extrusion bars, spec cards,
        section pills) even when the browser's "background graphics" is off. */
     .seg.cut, .seg.off, .sect, .boxsize, .platform, .thermal, .pricing, .windzone, .hpill {
@@ -245,6 +258,7 @@
     <div class="col" id="left"></div>
     <div class="col" id="right"></div>
   </div>
+  <div class="wide" id="wide-config"></div>
 </div>
 
 <div class="wrap reswrap" id="tab-resources" style="display:none">
@@ -1527,8 +1541,11 @@ function renderRight() {
   var view = buildDiagram(config);
   var rows = bom.headExtrusions.concat(bom.sillExtrusions).concat(bom.jambExtrusions).concat(bom.frameExtrusions).concat(bom.mullionExtrusions);
 
-  document.getElementById("right").innerHTML =
-    renderBom(bom, opening, thermal, pricing) + renderDiagramPanel(view) + renderOptimiser(rows);
+  /* The BOM stays in the narrow grid column; the diagram and cut list are wide
+     drawings, so they render into the full-bleed .wide strip below the grid. */
+  document.getElementById("right").innerHTML = renderBom(bom, opening, thermal, pricing);
+  document.getElementById("wide-config").innerHTML =
+    renderDiagramPanel(view) + renderOptimiser(rows);
 }
 
 function render() {
