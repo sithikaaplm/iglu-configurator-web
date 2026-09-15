@@ -520,7 +520,7 @@ var UNPRICED_SECTIONS = ["Window frame", "Mullions", "Packer inserts"];
 
 /* Extrusions — whole 5m stock lengths from the APLNZ ERP (aplnz_App), read from
    itemprice_mst.unit_price1 for the stock-length SKU <item>.500.<finish>
-   (".500" = 5.00m), effective 2026-06-03.
+   (".500" = 5.00m), effective 2026-08-08.
    NOT emdaItemFinishPrice.price × 5 — that $/m rate does not multiply up to the
    stick price (24801 Mill is 21.760584/m there, but a 5m stick sells for 90.34).
    24800/24810/24820 are base profile codes; the ERP stocks them with a cavity
@@ -545,9 +545,9 @@ var DEFAULT_FINISH = "01";
 
 /* Price of one 5m stock length, by ERP item code then finish code (NZD ex GST). */
 var EXTRUSION_STICK_PRICES = {
-  "24801": { "01":90.34, "21":111.49, "22":127.54, "26":107.79, "28":123.69, "41":102.04, "43":106.09, "44":113.89, "45":162.49, "46":131.39 },
-  "24811": { "01":76.34, "21":94.74375, "22":105.44375, "26":92.29375, "28":102.89375, "41":84.09, "43":86.79, "44":91.99, "45":124.34, "46":103.64 },
-  "24821": { "01":96.94, "21":119.44, "22":136.59, "26":115.49, "28":132.49, "41":109.39, "43":113.69, "44":122.04, "45":173.79, "46":140.64 }
+  "24801": { "01":92.19, "21":113.19, "22":129.19, "26":109.54, "28":125.39, "41":103.84, "43":107.84, "44":115.64, "45":163.94, "46":133.04 },
+  "24811": { "01":77.84, "21":96.19375, "22":106.84375, "26":93.74375, "28":104.29375, "41":85.59, "43":88.24, "44":93.44, "45":125.59, "46":104.99 },
+  "24821": { "01":98.94, "21":121.34, "22":138.39, "26":117.44, "28":134.29, "41":111.39, "43":115.64, "44":123.94, "45":175.39, "46":142.44 }
 };
 
 function extrusionStickPrice(partNo, finish) {
